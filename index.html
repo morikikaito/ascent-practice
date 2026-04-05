@@ -1,0 +1,1057 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#050507">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="ASCENT Practice">
+<link rel="manifest" href="/manifest.json">
+<title>ASCENT Practice | 判断力トレーニング</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Noto+Sans+JP:wght@900&family=Noto+Serif+JP:wght@300;400;500;700&display=swap" rel="stylesheet">
+<style>
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   ASCENT PRACTICE v3 Phase2 — ALTIUS DESIGN SYSTEM
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+:root {
+  --bg: #050507;
+  --bg-drill: #000000;
+  --bg-card: #0d0d10;
+  --bg-elevated: #141418;
+  --gold: #C9A84C;
+  --gold-light: #e0c070;
+  --gold-dark: #9a7a2e;
+  --gold-glow: rgba(201,168,76,0.15);
+  --text: #F5F0E8;
+  --text-muted: rgba(245,240,232,0.55);
+  --text-dim: rgba(245,240,232,0.35);
+  --border: rgba(201,168,76,0.2);
+  --border-bright: rgba(201,168,76,0.5);
+  --success: #4CAF50;
+  --danger: #E53935;
+  --radius: 12px;
+  --radius-sm: 8px;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body {
+  height: 100%; overflow: hidden;
+  background: var(--bg); color: var(--text);
+  font-family: 'Noto Serif JP', serif;
+  -webkit-font-smoothing: antialiased;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
+/* ━━━ SCREENS ━━━ */
+.screen {
+  position: fixed; inset: 0;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  padding: 24px; opacity: 0; pointer-events: none;
+  transition: opacity 0.4s ease; overflow-y: auto;
+}
+.screen.active { opacity: 1; pointer-events: all; }
+.screen.hard-cut { transition: none; }
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ━━━ LOGIN ━━━ */
+#screen-login {
+  background: radial-gradient(ellipse at 50% 30%, rgba(201,168,76,0.08) 0%, transparent 60%), var(--bg);
+}
+.login-logo {
+  width: 64px; height: 64px; border: 1.5px solid var(--gold); border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  margin: 0 auto 24px; box-shadow: 0 0 30px rgba(201,168,76,0.2);
+}
+.login-logo svg { width: 32px; height: 32px; fill: var(--gold); }
+.login-title {
+  font-family: 'Cinzel', serif; font-size: 22px; font-weight: 700;
+  letter-spacing: 0.15em; color: var(--gold); text-align: center; margin-bottom: 6px;
+}
+.login-subtitle {
+  font-size: 13px; color: var(--text-muted); text-align: center;
+  letter-spacing: 0.08em; margin-bottom: 32px;
+}
+.login-form { width: 100%; max-width: 320px; }
+.form-label {
+  display: block; font-family: 'Cinzel', serif; font-size: 11px;
+  letter-spacing: 0.15em; color: var(--text-muted); margin-bottom: 8px;
+}
+.form-input {
+  width: 100%; background: var(--bg-card); border: 1px solid var(--border);
+  border-radius: var(--radius-sm); padding: 14px 16px; color: var(--text);
+  font-family: 'Noto Serif JP', serif; font-size: 16px; outline: none;
+  transition: border-color 0.2s; -webkit-appearance: none;
+}
+.form-input:focus { border-color: var(--gold); box-shadow: 0 0 0 3px var(--gold-glow); }
+.form-input::placeholder { color: var(--text-dim); }
+.btn-primary {
+  width: 100%;
+  background: linear-gradient(135deg, var(--gold-dark), var(--gold), var(--gold-light));
+  border: none; border-radius: var(--radius-sm); padding: 16px;
+  color: #050507; font-family: 'Cinzel', serif; font-size: 14px; font-weight: 700;
+  letter-spacing: 0.15em; cursor: pointer;
+  transition: opacity 0.2s, transform 0.1s; margin-top: 8px;
+}
+.btn-primary:active { opacity: 0.85; transform: scale(0.98); }
+.login-error { color: var(--danger); font-size: 13px; text-align: center; margin-top: 12px; min-height: 20px; }
+
+/* Plan Selector */
+.plan-selector {
+  display: flex; gap: 8px; margin-bottom: 20px;
+}
+.plan-opt {
+  flex: 1; padding: 12px 8px; background: var(--bg-card); border: 1.5px solid var(--border);
+  border-radius: var(--radius-sm); text-align: center; cursor: pointer;
+  transition: border-color 0.2s, background 0.2s;
+  font-family: 'Cinzel', serif; font-size: 12px; font-weight: 700;
+  letter-spacing: 0.08em; color: var(--text-muted);
+}
+.plan-opt span {
+  display: block; font-family: 'Noto Serif JP', serif; font-size: 10px;
+  font-weight: 400; color: var(--text-dim); margin-top: 4px; letter-spacing: 0;
+}
+.plan-opt.active {
+  border-color: var(--gold); color: var(--gold); background: rgba(201,168,76,0.08);
+}
+.plan-opt:active { transform: scale(0.97); }
+
+/* ━━━ HOME ━━━ */
+#screen-home { background: var(--bg); justify-content: flex-start; padding: 0; }
+.home-header {
+  width: 100%; padding: 20px 20px 16px; border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: space-between;
+  background: var(--bg-card); position: sticky; top: 0; z-index: 10;
+}
+.home-brand { font-family: 'Cinzel', serif; font-size: 14px; font-weight: 700; letter-spacing: 0.15em; color: var(--gold); }
+.home-brand span { font-size: 10px; color: var(--text-muted); display: block; letter-spacing: 0.1em; font-weight: 400; }
+.header-right { display: flex; align-items: center; gap: 10px; }
+.plan-badge-header {
+  padding: 4px 10px; border-radius: 100px; font-family: 'Cinzel', serif;
+  font-size: 10px; letter-spacing: 0.1em; font-weight: 700; cursor: pointer;
+  transition: opacity 0.2s;
+}
+.plan-badge-header:active { opacity: 0.7; }
+.plan-badge-header.lite { border: 1px solid var(--text-dim); color: var(--text-dim); }
+.plan-badge-header.unleash { border: 1px solid var(--gold); color: var(--gold); }
+.plan-badge-header.pro { border: 1px solid var(--gold); color: #050507; background: var(--gold); }
+.logout-btn {
+  background: none; border: 1px solid var(--border); border-radius: 6px;
+  padding: 6px 12px; color: var(--text-muted); font-size: 12px; cursor: pointer;
+  font-family: 'Noto Serif JP', serif; transition: border-color 0.2s, color 0.2s;
+}
+.logout-btn:hover { border-color: var(--gold); color: var(--gold); }
+.home-content { width: 100%; padding: 20px; max-width: 480px; margin: 0 auto; }
+
+/* Today Card */
+.today-card {
+  background: linear-gradient(135deg, var(--bg-card), var(--bg-elevated));
+  border: 1px solid var(--border-bright); border-radius: var(--radius);
+  padding: 20px; margin-bottom: 20px; position: relative; overflow: hidden;
+}
+.today-card::before {
+  content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
+  background: linear-gradient(90deg, transparent, var(--gold), transparent);
+}
+.today-label {
+  font-family: 'Cinzel', serif; font-size: 10px; letter-spacing: 0.2em;
+  color: var(--gold); margin-bottom: 12px;
+}
+.today-row { display: flex; align-items: center; gap: 16px; margin-bottom: 8px; }
+.streak-badge { font-family: 'Cinzel', serif; font-size: 16px; color: var(--gold); font-weight: 700; }
+.title-badge {
+  display: inline-block; padding: 3px 12px; border: 1px solid var(--gold);
+  border-radius: 100px; font-family: 'Cinzel', serif; font-size: 11px;
+  letter-spacing: 0.1em; color: var(--gold);
+}
+.today-message { font-size: 13px; color: var(--text-muted); line-height: 1.6; }
+
+/* Heatmap */
+.heatmap-section { margin-bottom: 20px; }
+.heatmap-grid { display: grid; grid-template-columns: repeat(13, 1fr); gap: 3px; }
+.heatmap-cell { aspect-ratio: 1; border-radius: 2px; min-width: 0; }
+.heatmap-0 { background: rgba(245,240,232,0.06); }
+.heatmap-1 { background: rgba(201,168,76,0.25); }
+.heatmap-2 { background: rgba(201,168,76,0.5); }
+.heatmap-3 { background: rgba(201,168,76,0.75); }
+.heatmap-4 { background: var(--gold); }
+.heatmap-labels {
+  display: flex; justify-content: space-between; margin-top: 6px;
+  font-size: 9px; color: var(--text-dim); font-family: 'Cinzel', serif;
+}
+
+/* Badges */
+.badges-section { margin-bottom: 20px; }
+.badges-grid { display: flex; flex-wrap: wrap; gap: 8px; }
+.badge-item {
+  display: flex; align-items: center; gap: 8px;
+  padding: 8px 14px; background: var(--bg-card); border: 1px solid var(--border);
+  border-radius: 100px; font-size: 12px; color: var(--text-muted);
+  transition: border-color 0.2s;
+}
+.badge-item.earned { border-color: var(--gold); color: var(--gold); }
+.badge-item.locked-plan {
+  opacity: 0.4; cursor: pointer;
+}
+.badge-item .badge-icon { font-size: 14px; }
+.badge-lock-text {
+  font-size: 9px; color: var(--text-dim); margin-left: 2px;
+}
+
+/* Menu */
+.menu-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px; }
+.menu-card {
+  background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 20px 16px; cursor: pointer;
+  transition: border-color 0.2s, transform 0.1s, box-shadow 0.2s; text-align: center;
+}
+.menu-card:active { transform: scale(0.97); }
+.menu-card:hover { border-color: var(--gold); box-shadow: 0 4px 20px var(--gold-glow); }
+.menu-card.featured {
+  grid-column: 1 / -1;
+  background: linear-gradient(135deg, rgba(201,168,76,0.1), rgba(201,168,76,0.05));
+  border-color: var(--gold);
+}
+.menu-icon { font-size: 28px; margin-bottom: 10px; display: block; }
+.menu-title { font-family: 'Cinzel', serif; font-size: 12px; letter-spacing: 0.1em; color: var(--text); margin-bottom: 4px; }
+.menu-desc { font-size: 11px; color: var(--text-muted); line-height: 1.5; }
+.section-title {
+  font-family: 'Cinzel', serif; font-size: 11px; letter-spacing: 0.2em;
+  color: var(--gold); margin-bottom: 12px;
+}
+
+/* ━━━ MODE SELECT ━━━ */
+#screen-mode-select, #screen-settings, #screen-shoot-select, #screen-history, #screen-reaction-select {
+  background: var(--bg); justify-content: flex-start; padding: 0; overflow-y: auto;
+}
+.sub-header {
+  width: 100%; padding: 16px 20px; border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; gap: 12px; background: var(--bg-card);
+  position: sticky; top: 0; z-index: 10;
+}
+.back-btn {
+  background: none; border: none; color: var(--text-muted); cursor: pointer;
+  padding: 4px; display: flex; align-items: center; font-size: 20px;
+}
+.sub-title { font-family: 'Cinzel', serif; font-size: 13px; letter-spacing: 0.1em; color: var(--text); flex: 1; }
+.sub-content { width: 100%; padding: 20px; max-width: 480px; margin: 0 auto; }
+.mode-card {
+  background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 20px; margin-bottom: 12px; cursor: pointer; transition: border-color 0.2s, box-shadow 0.2s;
+}
+.mode-card:active { transform: scale(0.98); }
+.mode-card:hover { border-color: var(--gold); box-shadow: 0 4px 20px var(--gold-glow); }
+.mode-card-title { font-family: 'Cinzel', serif; font-size: 14px; color: var(--gold); letter-spacing: 0.1em; margin-bottom: 8px; }
+.mode-card-desc { font-size: 13px; color: var(--text-muted); line-height: 1.6; margin-bottom: 10px; }
+.mode-legend { display: flex; gap: 12px; flex-wrap: wrap; }
+.mode-legend-item {
+  font-size: 12px; color: var(--text-dim); padding: 4px 10px; background: var(--bg-elevated); border-radius: 4px;
+}
+.mode-legend-item span { font-family: 'Noto Sans JP', sans-serif; font-weight: 900; color: #fff; margin-right: 4px; }
+.mode-card.locked { opacity: 0.45; cursor: default; pointer-events: none; }
+.mode-card.locked .mode-card-title { color: var(--text-dim); }
+.mode-card.plan-locked { opacity: 0.55; }
+.mode-card.plan-locked .mode-card-title { color: var(--text-dim); }
+.lock-info { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text-dim); margin-top: 8px; }
+
+/* ━━━ SETTINGS ━━━ */
+.settings-group { margin-bottom: 24px; }
+.settings-label { font-family: 'Cinzel', serif; font-size: 11px; letter-spacing: 0.15em; color: var(--gold); margin-bottom: 12px; }
+.settings-options { display: flex; flex-wrap: wrap; gap: 8px; }
+.settings-opt {
+  padding: 10px 16px; background: var(--bg-card); border: 1px solid var(--border);
+  border-radius: var(--radius-sm); color: var(--text-muted); font-size: 13px;
+  cursor: pointer; transition: border-color 0.2s, color 0.2s; font-family: 'Noto Serif JP', serif;
+}
+.settings-opt.active { border-color: var(--gold); color: var(--gold); background: rgba(201,168,76,0.08); }
+.settings-opt:active { transform: scale(0.97); }
+.volume-group {
+  display: flex; align-items: center; gap: 12px; margin-bottom: 20px;
+  padding: 12px 16px; background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius-sm);
+}
+.volume-icon { font-size: 16px; color: var(--text-muted); flex-shrink: 0; }
+.volume-slider { flex: 1; -webkit-appearance: none; appearance: none; height: 4px; background: var(--border); border-radius: 2px; outline: none; }
+.volume-slider::-webkit-slider-thumb { -webkit-appearance: none; width: 20px; height: 20px; background: var(--gold); border-radius: 50%; cursor: pointer; border: none; box-shadow: 0 0 8px rgba(201,168,76,0.4); }
+.volume-slider::-moz-range-thumb { width: 20px; height: 20px; background: var(--gold); border-radius: 50%; cursor: pointer; border: none; }
+.volume-val { font-family: 'Cinzel', serif; font-size: 12px; color: var(--gold); min-width: 32px; text-align: right; }
+
+/* ━━━ TRAINING ━━━ */
+#screen-training { background: var(--bg-drill); justify-content: center; padding: 0; }
+.training-hud { position: absolute; top: 0; left: 0; right: 0; padding: 16px 20px; display: flex; justify-content: space-between; align-items: center; z-index: 5; }
+.hud-item { font-family: 'Cinzel', serif; font-size: 12px; color: var(--text-muted); letter-spacing: 0.08em; }
+.hud-item strong { color: var(--gold); }
+.drill-number {
+  font-family: 'Noto Sans JP', sans-serif; font-weight: 900; font-size: min(50vw, 280px); color: #FFFFFF;
+  text-shadow: 0 0 40px rgba(201,168,76,0.6), 0 0 80px rgba(201,168,76,0.3);
+  opacity: 0; transition: none; user-select: none; line-height: 1;
+}
+.drill-number.visible { opacity: 1; }
+.training-abort {
+  position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%);
+  background: none; border: 1px solid var(--border); border-radius: 100px;
+  padding: 8px 24px; color: var(--text-dim); font-size: 12px; cursor: pointer;
+  font-family: 'Noto Serif JP', serif; z-index: 5;
+}
+
+/* ━━━ REACTION ━━━ */
+#screen-reaction { background: var(--bg-drill); justify-content: center; padding: 0; user-select: none; }
+.reaction-symbol { font-size: min(60vw, 320px); line-height: 1; opacity: 0; transition: none; }
+.reaction-symbol.visible { opacity: 1; }
+.reaction-symbol.is-go { color: var(--gold); }
+.reaction-symbol.is-nogo { color: var(--danger); }
+.reaction-hud { position: absolute; top: 0; left: 0; right: 0; padding: 16px 20px; display: flex; justify-content: space-between; z-index: 5; }
+.reaction-tap-zone { position: absolute; inset: 0; z-index: 2; cursor: pointer; }
+
+/* ━━━ SHOOT RECORD ━━━ */
+#screen-shoot-record { background: var(--bg); justify-content: flex-start; padding: 0; }
+.shoot-stats { width: 100%; padding: 24px 20px; text-align: center; border-bottom: 1px solid var(--border); background: var(--bg-card); }
+.shoot-stats-main { font-family: 'Cinzel', serif; font-size: 36px; font-weight: 700; color: var(--gold); margin-bottom: 4px; }
+.shoot-stats-sub { font-size: 14px; color: var(--text-muted); }
+.shoot-stats-type { font-family: 'Cinzel', serif; font-size: 11px; letter-spacing: 0.15em; color: var(--text-dim); margin-top: 8px; }
+.shoot-buttons { flex: 1; display: flex; width: 100%; gap: 0; }
+.shoot-btn { flex: 1; display: flex; align-items: center; justify-content: center; font-size: min(30vw, 180px); cursor: pointer; border: none; transition: background 0.1s; user-select: none; -webkit-user-select: none; }
+.shoot-btn:active { opacity: 0.7; }
+.shoot-btn-made { background: rgba(201,168,76,0.05); border-right: 1px solid var(--border); color: var(--gold); }
+.shoot-btn-miss { background: rgba(229,57,53,0.03); color: var(--text-dim); }
+.shoot-finish { position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%); background: none; border: 1px solid var(--border-bright); border-radius: 100px; padding: 10px 32px; color: var(--text-muted); font-size: 13px; cursor: pointer; font-family: 'Cinzel', serif; letter-spacing: 0.1em; z-index: 5; }
+
+/* ━━━ RESULT ━━━ */
+#screen-result { background: radial-gradient(ellipse at 50% 20%, rgba(201,168,76,0.1) 0%, transparent 60%), var(--bg); z-index: 50; }
+.result-badge { width: 100px; height: 100px; border: 2px solid var(--gold); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 24px; box-shadow: 0 0 40px rgba(201,168,76,0.25); font-size: 40px; }
+.result-title { font-family: 'Cinzel', serif; font-size: 20px; font-weight: 700; letter-spacing: 0.15em; color: var(--gold); text-align: center; margin-bottom: 8px; }
+.result-subtitle { font-size: 13px; color: var(--text-muted); text-align: center; margin-bottom: 24px; }
+.result-stats { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; width: 100%; max-width: 340px; margin: 0 auto 24px; }
+.result-stats.two-col { grid-template-columns: 1fr 1fr; }
+.stat-box { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 16px 8px; text-align: center; }
+.stat-value { font-family: 'Cinzel', serif; font-size: 24px; font-weight: 700; color: var(--gold); display: block; margin-bottom: 4px; }
+.stat-label { font-size: 10px; color: var(--text-muted); letter-spacing: 0.05em; }
+.result-message { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px 20px; width: 100%; max-width: 340px; margin: 0 auto 20px; font-size: 13px; color: var(--text-muted); line-height: 1.7; text-align: center; }
+.result-title-change { text-align: center; margin-bottom: 20px; font-family: 'Cinzel', serif; font-size: 14px; color: var(--gold); animation: fadeUp 0.6s ease; }
+.result-actions { display: flex; flex-direction: column; gap: 10px; width: 100%; max-width: 340px; margin: 0 auto; }
+.btn-secondary { background: transparent; border: 1px solid var(--border-bright); border-radius: var(--radius-sm); padding: 14px; color: var(--text); font-family: 'Cinzel', serif; font-size: 13px; letter-spacing: 0.1em; cursor: pointer; transition: border-color 0.2s, color 0.2s; }
+.btn-secondary:hover { border-color: var(--gold); color: var(--gold); }
+.pb-comparison { width: 100%; max-width: 340px; margin: 0 auto 16px; background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); padding: 12px 16px; text-align: center; font-size: 13px; color: var(--text-muted); }
+.pb-comparison .pb-diff-better { color: var(--gold); font-weight: 700; }
+.pb-comparison .pb-diff-worse { color: var(--text-dim); }
+.btn-share { background: transparent; border: 1px solid var(--gold); border-radius: var(--radius-sm); padding: 12px; color: var(--gold); font-family: 'Cinzel', serif; font-size: 12px; letter-spacing: 0.1em; cursor: pointer; transition: background 0.2s; width: 100%; text-align: center; }
+.btn-share:active { background: rgba(201,168,76,0.1); }
+
+/* Particles */
+.particles-container { position: fixed; inset: 0; pointer-events: none; z-index: 100; overflow: hidden; }
+.particle { position: absolute; width: 6px; height: 6px; background: var(--gold); border-radius: 50%; animation: particleFall linear forwards; }
+@keyframes particleFall { 0% { opacity: 1; transform: translateY(0) scale(1); } 100% { opacity: 0; transform: translateY(100vh) scale(0.3); } }
+
+/* PB Flash */
+.pb-flash-overlay { position: fixed; inset: 0; z-index: 200; display: flex; flex-direction: column; align-items: center; justify-content: center; background: #2a1f00; box-shadow: inset 0 0 60px #C9A84C; opacity: 0; pointer-events: none; transition: opacity 0.2s; }
+.pb-flash-overlay.active { opacity: 1; pointer-events: all; }
+.pb-flash-text { font-family: 'Cinzel', serif; font-size: 24px; font-weight: 700; color: var(--gold); letter-spacing: 0.15em; text-align: center; text-shadow: 0 0 30px rgba(201,168,76,0.8); animation: fadeUp 0.4s ease; }
+.pb-flash-sub { font-family: 'Cinzel', serif; font-size: 14px; color: var(--gold-light); margin-top: 12px; animation: fadeUp 0.6s ease; }
+
+/* Unlock Overlay */
+.unlock-overlay { position: fixed; inset: 0; z-index: 200; display: flex; flex-direction: column; align-items: center; justify-content: center; background: var(--bg); opacity: 0; pointer-events: none; transition: opacity 0.3s; }
+.unlock-overlay.active { opacity: 1; pointer-events: all; }
+.unlock-icon { font-size: 48px; margin-bottom: 16px; animation: fadeUp 0.3s ease; }
+.unlock-text { font-family: 'Cinzel', serif; font-size: 20px; font-weight: 700; color: var(--gold); letter-spacing: 0.15em; text-align: center; text-shadow: 0 0 20px rgba(201,168,76,0.5); animation: fadeUp 0.5s ease; }
+
+/* ━━━ UPGRADE MODAL ━━━ */
+.modal-backdrop {
+  position: fixed; inset: 0; z-index: 300; background: rgba(0,0,0,0.7);
+  display: flex; align-items: center; justify-content: center;
+  opacity: 0; pointer-events: none; transition: opacity 0.3s; padding: 24px;
+}
+.modal-backdrop.active { opacity: 1; pointer-events: all; }
+.modal-box {
+  width: 100%; max-width: 360px; background: var(--bg); border: 1px solid var(--gold);
+  border-radius: var(--radius); padding: 32px 24px; text-align: center;
+}
+.modal-title {
+  font-family: 'Cinzel', serif; font-size: 18px; font-weight: 700; color: var(--gold);
+  letter-spacing: 0.12em; margin-bottom: 16px;
+}
+.modal-body { font-size: 13px; color: var(--text-muted); line-height: 1.7; margin-bottom: 24px; }
+.modal-cta {
+  display: block; width: 100%; padding: 16px; background: linear-gradient(135deg, var(--gold-dark), var(--gold), var(--gold-light));
+  border: none; border-radius: var(--radius-sm); color: #050507; font-family: 'Cinzel', serif;
+  font-size: 13px; font-weight: 700; letter-spacing: 0.1em; cursor: pointer;
+  text-decoration: none; transition: opacity 0.2s;
+}
+.modal-cta:active { opacity: 0.85; }
+.modal-close {
+  background: none; border: none; color: var(--text-dim); font-size: 13px;
+  margin-top: 16px; cursor: pointer; font-family: 'Noto Serif JP', serif;
+  transition: color 0.2s;
+}
+.modal-close:hover { color: var(--text-muted); }
+
+/* ━━━ HISTORY ━━━ */
+.history-summary { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 24px; }
+.summary-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; text-align: center; }
+.summary-value { font-family: 'Cinzel', serif; font-size: 28px; font-weight: 700; color: var(--gold); display: block; margin-bottom: 4px; }
+.summary-label { font-size: 11px; color: var(--text-muted); }
+.history-entries { display: flex; flex-direction: column; gap: 10px; }
+.history-entry { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 14px 16px; }
+.history-entry-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+.history-entry-date { font-size: 12px; color: var(--text-muted); }
+.history-entry-score { font-family: 'Cinzel', serif; font-size: 16px; color: var(--gold); }
+.history-entry-detail { font-size: 12px; color: var(--text-dim); }
+.history-entry-type { display: inline-block; font-size: 10px; padding: 2px 8px; border-radius: 4px; background: var(--bg-elevated); color: var(--text-dim); margin-top: 4px; }
+.empty-records { text-align: center; padding: 24px; color: var(--text-dim); font-size: 13px; }
+
+/* Loading / Toast */
+.loading-overlay { position: fixed; inset: 0; background: var(--bg); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 1000; transition: opacity 0.5s ease; }
+.loading-overlay.hidden { opacity: 0; pointer-events: none; }
+.loading-logo { font-family: 'Cinzel', serif; font-size: 18px; letter-spacing: 0.2em; color: var(--gold); margin-bottom: 8px; }
+.loading-sub { font-size: 12px; color: var(--text-muted); letter-spacing: 0.1em; margin-bottom: 32px; }
+.loading-spinner { width: 32px; height: 32px; border: 2px solid var(--border); border-top-color: var(--gold); border-radius: 50%; animation: spin 0.8s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.toast { position: fixed; bottom: 32px; left: 50%; transform: translateX(-50%) translateY(20px); background: var(--bg-elevated); border: 1px solid var(--border-bright); border-radius: 100px; padding: 12px 24px; font-size: 13px; color: var(--text); opacity: 0; transition: opacity 0.3s, transform 0.3s; z-index: 999; white-space: nowrap; }
+.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+</style>
+</head>
+<body>
+
+<div class="loading-overlay" id="loading"><div class="loading-logo">ASCENT</div><div class="loading-sub">PRACTICE v3</div><div class="loading-spinner"></div></div>
+<div class="particles-container" id="particles"></div>
+<div class="pb-flash-overlay" id="pb-flash"><div class="pb-flash-text" id="pb-flash-text">⚡ NEW PERSONAL BEST ⚡</div><div class="pb-flash-sub" id="pb-flash-sub"></div></div>
+<div class="unlock-overlay" id="unlock-overlay"><div class="unlock-icon">🔓</div><div class="unlock-text" id="unlock-text">HARD MODE UNLOCKED</div></div>
+<div class="toast" id="toast"></div>
+
+<!-- ④ Upgrade Modal -->
+<div class="modal-backdrop" id="upgrade-modal">
+  <div class="modal-box">
+    <div class="modal-title">UNLEASH限定コンテンツ</div>
+    <div class="modal-body">HARD/ELITEモード・全バッジ・保護者レポートが解放されます</div>
+    <a class="modal-cta" href="https://stepbystep-ascent.com" target="_blank" rel="noopener">月額¥4,980 → 今すぐアップグレード</a>
+    <button class="modal-close" onclick="hideUpgradeModal()">閉じる</button>
+  </div>
+</div>
+
+<!-- ━━━ LOGIN ━━━ -->
+<div class="screen" id="screen-login">
+  <div class="login-logo"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg></div>
+  <div class="login-title">ASCENT PRACTICE</div>
+  <div class="login-subtitle">判断力トレーニングシステム</div>
+  <div class="login-form">
+    <div class="form-label">SELECT PLAN</div>
+    <div style="font-size:12px;color:var(--text-dim);margin-bottom:12px">ご契約のプランを選択してください</div>
+    <div class="plan-selector" id="plan-selector">
+      <div class="plan-opt active" data-plan="lite" onclick="selectLoginPlan('lite')">LITE</div>
+      <div class="plan-opt" data-plan="unleash" onclick="selectLoginPlan('unleash')">UNLEASH</div>
+      <div class="plan-opt" data-plan="pro" onclick="selectLoginPlan('pro')">PRO</div>
+    </div>
+    <div style="margin-bottom:16px">
+      <label class="form-label" for="password-input">ACCESS CODE</label>
+      <input class="form-input" type="password" id="password-input" placeholder="パスワードを入力" autocomplete="current-password">
+    </div>
+    <button class="btn-primary" id="login-btn">ENTER</button>
+    <div class="login-error" id="login-error"></div>
+  </div>
+</div>
+
+<!-- ━━━ HOME ━━━ -->
+<div class="screen" id="screen-home">
+  <div class="home-header">
+    <div class="home-brand">ASCENT<span>PRACTICE SYSTEM</span></div>
+    <div class="header-right">
+      <span class="plan-badge-header lite" id="plan-badge-header" onclick="onPlanBadgeClick()">LITE</span>
+      <button class="logout-btn" id="logout-btn">ログアウト</button>
+    </div>
+  </div>
+  <div class="home-content">
+    <div class="today-card">
+      <div class="today-label">TODAY'S STATUS</div>
+      <div class="today-row">
+        <span class="streak-badge" id="streak-display">🔥 0日連続</span>
+        <span class="title-badge" id="title-display">ROOKIE</span>
+      </div>
+      <div class="today-message" id="today-message">今日のトレーニングを始めましょう。</div>
+    </div>
+    <div class="heatmap-section">
+      <div class="section-title">ACTIVITY — 90 DAYS</div>
+      <div class="heatmap-grid" id="heatmap"></div>
+      <div class="heatmap-labels"><span>90日前</span><span>今日</span></div>
+    </div>
+    <div class="badges-section">
+      <div class="section-title">BADGES</div>
+      <div class="badges-grid" id="badges-grid"></div>
+    </div>
+    <div class="menu-grid">
+      <div class="menu-card featured" onclick="showModeSelect()">
+        <span class="menu-icon">🏀</span><div class="menu-title">JUDGMENT TRAINING</div><div class="menu-desc">瞬時の判断力を鍛える実戦ドリル</div>
+      </div>
+      <div class="menu-card" onclick="showReactionSelect()">
+        <span class="menu-icon">⚡</span><div class="menu-title">REACTION SPEED</div><div class="menu-desc">反応速度を計測・強化</div>
+      </div>
+      <div class="menu-card" onclick="showShootSelect()">
+        <span class="menu-icon">🎯</span><div class="menu-title">SHOOT RECORD</div><div class="menu-desc">自主練シュート記録</div>
+      </div>
+      <div class="menu-card" onclick="showHistory()">
+        <span class="menu-icon">📊</span><div class="menu-title">HISTORY</div><div class="menu-desc">過去の記録を確認</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ━━━ MODE SELECT ━━━ -->
+<div class="screen" id="screen-mode-select">
+  <div class="sub-header"><button class="back-btn" onclick="showScreen('screen-home')">←</button><div class="sub-title">JUDGMENT TRAINING</div></div>
+  <div class="sub-content">
+    <div class="mode-card" onclick="selectMode(1)"><div class="mode-card-title">MODE 1 — DRIBBLE</div><div class="mode-card-desc">ドリブル技術。番号に対応した技を瞬時に判断せよ。</div><div class="mode-legend"><div class="mode-legend-item"><span>1</span>クロスオーバー</div><div class="mode-legend-item"><span>2</span>レッグスルー</div><div class="mode-legend-item"><span>3</span>ビハインド</div></div></div>
+    <div class="mode-card" onclick="selectMode(2)"><div class="mode-card-title">MODE 2 — 3x3 SHOT BASIC</div><div class="mode-card-desc">3x3シュート判断・初級。2点ライン内=1点 / 外=2点。</div><div class="mode-legend"><div class="mode-legend-item"><span>1</span>1点シュート</div><div class="mode-legend-item"><span>2</span>2点シュート</div></div></div>
+    <div class="mode-card" onclick="selectMode(3)"><div class="mode-card-title">MODE 3 — 3x3 SHOT ADVANCED</div><div class="mode-card-desc">3x3シュート判断・上級。高度なシュートセレクションを磨け。</div><div class="mode-legend"><div class="mode-legend-item"><span>1</span>1点シュート</div><div class="mode-legend-item"><span>2</span>2点シュート</div></div></div>
+    <div class="mode-card" onclick="selectMode(4)"><div class="mode-card-title">MODE 4 — 5v5</div><div class="mode-card-desc">5対5の実戦判断。3Pラインを意識して瞬時に判断せよ。</div><div class="mode-legend"><div class="mode-legend-item"><span>1</span>レイアップ</div><div class="mode-legend-item"><span>2</span>ミドル</div><div class="mode-legend-item"><span>3</span>3P</div></div></div>
+  </div>
+</div>
+
+<!-- ━━━ SETTINGS ━━━ -->
+<div class="screen" id="screen-settings">
+  <div class="sub-header"><button class="back-btn" onclick="showScreen('screen-mode-select')">←</button><div class="sub-title">SETTINGS</div></div>
+  <div class="sub-content">
+    <div class="settings-group"><div class="settings-label">VOLUME</div><div class="volume-group"><span class="volume-icon">🔊</span><input type="range" class="volume-slider" min="0" max="100" value="70" oninput="setVolume(this.value)"><span class="volume-val">70%</span></div></div>
+    <div class="settings-group"><div class="settings-label">INTERVAL（秒）</div><div class="settings-options" id="interval-options"><div class="settings-opt" data-val="0.5">0.5</div><div class="settings-opt" data-val="1">1</div><div class="settings-opt" data-val="2">2</div><div class="settings-opt" data-val="3">3</div><div class="settings-opt" data-val="5">5</div><div class="settings-opt active" data-val="random">ランダム</div></div></div>
+    <div class="settings-group"><div class="settings-label">REPS（回数）</div><div class="settings-options" id="reps-options"><div class="settings-opt" data-val="20">20</div><div class="settings-opt active" data-val="30">30</div><div class="settings-opt" data-val="50">50</div><div class="settings-opt" data-val="100">100</div><div class="settings-opt" data-val="0">無制限</div></div></div>
+    <button class="btn-primary" onclick="startDrill()" style="margin-top:24px">START TRAINING</button>
+  </div>
+</div>
+
+<!-- ━━━ TRAINING ━━━ -->
+<div class="screen hard-cut" id="screen-training">
+  <div class="training-hud"><div class="hud-item" id="hud-mode">MODE 1</div><div class="hud-item"><strong id="hud-count">0</strong> / <span id="hud-total">30</span></div><div class="hud-item" id="hud-timer">0:00</div></div>
+  <div class="drill-number" id="drill-number"></div>
+  <button class="training-abort" onclick="abortDrill()">中断して戻る</button>
+</div>
+
+<!-- ━━━ REACTION SELECT ━━━ -->
+<div class="screen" id="screen-reaction-select">
+  <div class="sub-header"><button class="back-btn" onclick="showScreen('screen-home')">←</button><div class="sub-title">REACTION SPEED</div></div>
+  <div class="sub-content">
+    <div class="settings-group"><div class="settings-label">VOLUME</div><div class="volume-group"><span class="volume-icon">🔊</span><input type="range" class="volume-slider" min="0" max="100" value="70" oninput="setVolume(this.value)"><span class="volume-val">70%</span></div></div>
+    <div class="section-title">SELECT DIFFICULTY</div>
+    <div id="reaction-difficulty-cards"></div>
+  </div>
+</div>
+
+<!-- ━━━ REACTION ━━━ -->
+<div class="screen hard-cut" id="screen-reaction">
+  <div class="reaction-hud"><div class="hud-item"><strong id="reaction-count">0</strong> / <span id="reaction-total">20</span></div><div class="hud-item" id="reaction-timer">0:00</div></div>
+  <div class="reaction-symbol" id="reaction-symbol"></div>
+  <div class="reaction-tap-zone" id="reaction-tap"></div>
+  <button class="training-abort" onclick="abortReaction()">中断して戻る</button>
+</div>
+
+<!-- ━━━ SHOOT SELECT ━━━ -->
+<div class="screen" id="screen-shoot-select">
+  <div class="sub-header"><button class="back-btn" onclick="showScreen('screen-home')">←</button><div class="sub-title">SHOOT RECORD</div></div>
+  <div class="sub-content">
+    <div class="mode-card" onclick="startShootRecord('1P')"><div class="mode-card-title">1P SHOT</div><div class="mode-card-desc">3x3 — 2点ライン内のシュート（1点）を記録</div></div>
+    <div class="mode-card" onclick="startShootRecord('2P')"><div class="mode-card-title">2P SHOT</div><div class="mode-card-desc">3x3 — 2点ライン外のシュート（2点）を記録</div></div>
+  </div>
+</div>
+
+<!-- ━━━ SHOOT RECORD ━━━ -->
+<div class="screen" id="screen-shoot-record">
+  <div class="shoot-stats"><div class="shoot-stats-type" id="shoot-type-label">1P SHOT</div><div class="shoot-stats-main" id="shoot-rate">0%</div><div class="shoot-stats-sub" id="shoot-detail">0本中 0本成功</div></div>
+  <div class="shoot-buttons"><button class="shoot-btn shoot-btn-made" onclick="recordShot(true)">○</button><button class="shoot-btn shoot-btn-miss" onclick="recordShot(false)">✕</button></div>
+  <button class="shoot-finish" onclick="finishShootRecord()">記録を終了</button>
+</div>
+
+<!-- ━━━ RESULT ━━━ -->
+<div class="screen" id="screen-result">
+  <div class="result-badge" id="result-badge">🏆</div>
+  <div class="result-title" id="result-title">TRAINING COMPLETE</div>
+  <div class="result-subtitle" id="result-subtitle"></div>
+  <div id="result-title-change"></div>
+  <div class="result-stats" id="result-stats"></div>
+  <div id="result-pb-comparison"></div>
+  <div class="result-message" id="result-message"></div>
+  <div class="result-actions" id="result-actions"></div>
+</div>
+
+<!-- ━━━ HISTORY ━━━ -->
+<div class="screen" id="screen-history">
+  <div class="sub-header"><button class="back-btn" onclick="showScreen('screen-home')">←</button><div class="sub-title">TRAINING HISTORY</div></div>
+  <div class="sub-content">
+    <div class="history-summary"><div class="summary-card"><span class="summary-value" id="total-sessions">0</span><span class="summary-label">総セッション数</span></div><div class="summary-card"><span class="summary-value" id="total-title">ROOKIE</span><span class="summary-label">現在の称号</span></div></div>
+    <div class="section-title">ALL RECORDS</div>
+    <div class="history-entries" id="history-entries"><div class="empty-records">まだ記録がありません。</div></div>
+  </div>
+</div>
+
+<script>
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   ASCENT PRACTICE v3 Phase2 — CORE LOGIC
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+
+/* ① プラン別パスワード */
+const PLAN_PASSWORDS = { lite: 'LITE2026', unleash: 'UNLEASH2026', pro: 'PRO2026' };
+
+const TITLE_THRESHOLDS = [
+  { min: 1500, name: 'PRO' }, { min: 500, name: 'UNLEASHED' },
+  { min: 150, name: 'PLAYER' }, { min: 30, name: 'ROOKIE' }
+];
+
+const REACTION_DIFFICULTIES = {
+  easy:   { key:'easy',   name:'EASY',   desc:'ゆっくり判断を磨く',          intervalMin:3000, intervalMax:5000, symbols:['◯','✕'],         goSymbols:['◯'],     total:15, unlockAt:0 },
+  normal: { key:'normal', name:'NORMAL', desc:'実戦レベルの反応速度',         intervalMin:1000, intervalMax:4000, symbols:['◯','✕'],         goSymbols:['◯'],     total:20, unlockAt:0 },
+  hard:   { key:'hard',   name:'HARD',   desc:'3択で瞬時に判断せよ',         intervalMin:500,  intervalMax:1000, symbols:['◯','✕','△'],     goSymbols:['◯','△'], total:25, unlockAt:30 },
+  elite:  { key:'elite',  name:'ELITE',  desc:'限界を超えた反応速度の領域',   intervalMin:300,  intervalMax:500,  symbols:['◯','✕','△','□'], goSymbols:['◯','△'], total:30, unlockAt:100 }
+};
+
+/* ③ バッジ定義 */
+const BADGE_DEFS = [
+  { id:'first_blood',     icon:'🩸', name:'FIRST BLOOD',      desc:'初回セッション完了',       plan:'all' },
+  { id:'streak_warrior',  icon:'🔥', name:'STREAK WARRIOR',   desc:'7日連続トレーニング',       plan:'all' },
+  { id:'sharpshooter',    icon:'🎯', name:'SHARPSHOOTER',     desc:'成功率80%以上を7日',        plan:'all' },
+  { id:'speed_demon',     icon:'⚡', name:'SPEED DEMON',      desc:'反応速度300ms以下',         plan:'unleash' },
+  { id:'elite_mind',      icon:'🧠', name:'ELITE MIND',       desc:'ELITEモードクリア',         plan:'unleash' },
+  { id:'judgment_master', icon:'👑', name:'JUDGMENT MASTER',  desc:'全4モードコンプリート',      plan:'unleash' }
+];
+
+let state = {
+  currentScreen: 'screen-login',
+  selectedPlan: 'lite',
+  selectedMode: 1,
+  settings: { interval: 'random', reps: 30 },
+  drill: { count: 0, total: 30, timerStart: 0, timerId: null, numberId: null, running: false },
+  reaction: { difficulty: 'normal', count: 0, total: 20, correct: 0, times: [], currentIsGo: false, showTime: 0, responded: false, timerId: null, hideId: null, running: false, timerStart: 0 },
+  shoot: { made: 0, total: 0, type: '1P' },
+  volume: 0.7
+};
+
+/* ━━━ WEB AUDIO ━━━ */
+let audioCtx = null;
+function ensureAudioContext() {
+  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  if (audioCtx.state === 'suspended') audioCtx.resume();
+  return audioCtx;
+}
+function playBeep(freq, duration) {
+  try {
+    const ctx = ensureAudioContext(); const osc = ctx.createOscillator(); const gain = ctx.createGain();
+    osc.connect(gain); gain.connect(ctx.destination); osc.frequency.value = freq; osc.type = 'sine';
+    gain.gain.value = state.volume; gain.gain.setValueAtTime(state.volume, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration);
+    osc.start(ctx.currentTime); osc.stop(ctx.currentTime + duration);
+  } catch(e) {}
+}
+function setVolume(val) {
+  state.volume = parseInt(val) / 100;
+  document.querySelectorAll('.volume-slider').forEach(s => s.value = val);
+  document.querySelectorAll('.volume-val').forEach(v => v.textContent = val + '%');
+}
+
+/* ━━━ PLAN HELPERS ━━━ */
+function getCurrentPlan() { return localStorage.getItem('currentPlan') || 'lite'; }
+function isPlanAtLeast(minPlan) {
+  const order = { lite: 0, unleash: 1, pro: 2 };
+  return (order[getCurrentPlan()] || 0) >= (order[minPlan] || 0);
+}
+
+/* ━━━ LOCALSTORAGE ━━━ */
+function getHistory() { try { return JSON.parse(localStorage.getItem('ascent_history_v3') || '[]'); } catch { return []; } }
+function saveToHistory(entry) {
+  const h = getHistory(); h.unshift(entry); if (h.length > 100) h.length = 100;
+  localStorage.setItem('ascent_history_v3', JSON.stringify(h));
+  incrementSessionCount(); updateLastActive();
+}
+function getHeatmap() { try { return JSON.parse(localStorage.getItem('ascent_heatmap') || '{}'); } catch { return {}; } }
+function recordHeatmap() {
+  const hm = getHeatmap(); const key = new Date().toISOString().slice(0, 10);
+  hm[key] = (hm[key] || 0) + 1; localStorage.setItem('ascent_heatmap', JSON.stringify(hm));
+}
+function getSessionCount() {
+  const stored = parseInt(localStorage.getItem('ascent_total_sessions') || '0');
+  if (stored === 0) { const fb = getHistory().length; if (fb > 0) { localStorage.setItem('ascent_total_sessions', String(fb)); return fb; } }
+  return stored;
+}
+function incrementSessionCount() { const c = getSessionCount() + 1; localStorage.setItem('ascent_total_sessions', String(c)); return c; }
+function updateLastActive() { localStorage.setItem('ascent_last_active', new Date().toISOString().slice(0, 10)); }
+function getReactionPB() { const v = parseFloat(localStorage.getItem('ascent_pb_reaction') || '0'); return v > 0 ? v : 9999; }
+function setReactionPB(ms) { localStorage.setItem('ascent_pb_reaction', String(ms)); }
+function getPBHistory() { try { return JSON.parse(localStorage.getItem('ascent_pb_history') || '[]'); } catch { return []; } }
+function addPBHistory(ms) {
+  const h = getPBHistory(); h.push({ date: new Date().toISOString().slice(0, 10), ms: ms });
+  const cutoff = new Date(); cutoff.setDate(cutoff.getDate() - 30); const cutStr = cutoff.toISOString().slice(0, 10);
+  localStorage.setItem('ascent_pb_history', JSON.stringify(h.filter(e => e.date >= cutStr)));
+}
+
+function getTitle(count) { if (count === undefined) count = getSessionCount(); for (const t of TITLE_THRESHOLDS) { if (count >= t.min) return t.name; } return '—'; }
+function getStreak() {
+  const hm = getHeatmap(); let streak = 0; const d = new Date();
+  for (let i = 0; i < 365; i++) { const key = d.toISOString().slice(0, 10); if (hm[key]) { streak++; } else { if (i > 0) break; } d.setDate(d.getDate() - 1); }
+  return streak;
+}
+
+/* ━━━ SCREEN NAV ━━━ */
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  state.currentScreen = id;
+  if (id === 'screen-home') updateHome();
+  if (id === 'screen-history') updateHistoryScreen();
+  if (id === 'screen-reaction-select') renderReactionSelect();
+}
+
+/* ━━━ LOGIN ① ━━━ */
+function selectLoginPlan(plan) {
+  state.selectedPlan = plan;
+  document.querySelectorAll('.plan-opt').forEach(o => o.classList.toggle('active', o.dataset.plan === plan));
+}
+function login() {
+  const val = document.getElementById('password-input').value.trim();
+  const err = document.getElementById('login-error');
+  const plan = state.selectedPlan;
+  const correctPw = PLAN_PASSWORDS[plan];
+  if (val === correctPw) {
+    err.textContent = '';
+    localStorage.setItem('ascent_auth', Date.now().toString());
+    localStorage.setItem('currentPlan', plan);
+    showScreen('screen-home');
+  } else {
+    err.textContent = 'アクセスコードが正しくありません';
+    document.getElementById('password-input').value = '';
+    document.getElementById('password-input').focus();
+  }
+}
+function logout() {
+  localStorage.removeItem('ascent_auth');
+  localStorage.removeItem('currentPlan');
+  document.getElementById('password-input').value = '';
+  showScreen('screen-login');
+}
+function isAuthValid() {
+  const ts = localStorage.getItem('ascent_auth');
+  if (!ts) return false;
+  return (Date.now() - parseInt(ts)) / 86400000 < 30;
+}
+
+/* ━━━ UPGRADE MODAL ④ ━━━ */
+function showUpgradeModal() { document.getElementById('upgrade-modal').classList.add('active'); }
+function hideUpgradeModal() { document.getElementById('upgrade-modal').classList.remove('active'); }
+
+/* ━━━ HOME ━━━ */
+function updateHome() {
+  const streak = getStreak(); const title = getTitle(); const plan = getCurrentPlan();
+  document.getElementById('streak-display').textContent = '🔥 ' + streak + '日連続';
+  document.getElementById('title-display').textContent = title;
+
+  /* ⑤ プランバッジ */
+  const pb = document.getElementById('plan-badge-header');
+  pb.textContent = plan.toUpperCase();
+  pb.className = 'plan-badge-header ' + plan;
+
+  const todayKey = new Date().toISOString().slice(0, 10);
+  const hm = getHeatmap(); const todayDone = hm[todayKey] > 0;
+  const messages = ['今日のトレーニングを始めましょう。','継続が力になる。今日も鍛えよう。','判断力は反復で磨かれる。','一歩ずつ、確実に上昇していこう。'];
+  document.getElementById('today-message').textContent = todayDone ? '今日のトレーニング完了！明日も続けよう。' : messages[streak % messages.length];
+
+  renderHeatmap();
+  renderBadges();
+  checkUnlocks();
+}
+
+function renderHeatmap() {
+  const hm = getHeatmap(); const grid = document.getElementById('heatmap'); const cells = []; const today = new Date();
+  for (let i = 90; i >= 0; i--) { const d = new Date(today); d.setDate(d.getDate() - i); const key = d.toISOString().slice(0, 10); const count = hm[key] || 0;
+    let level = 0; if (count >= 6) level = 4; else if (count >= 3) level = 3; else if (count >= 1) level = 2;
+    cells.push('<div class="heatmap-cell heatmap-' + level + '" title="' + key + ': ' + count + '回"></div>');
+  } grid.innerHTML = cells.join('');
+}
+
+/* ━━━ BADGES ③ ━━━ */
+function checkBadgeEarned(badge) {
+  const h = getHistory(); const sessions = getSessionCount();
+  switch(badge.id) {
+    case 'first_blood': return sessions >= 1;
+    case 'streak_warrior': return getStreak() >= 7;
+    case 'sharpshooter': {
+      const shootH = h.filter(e => e.type === 'shoot' && e.rate >= 80);
+      const days = new Set(shootH.map(e => e.date.slice(0, 10)));
+      return days.size >= 7;
+    }
+    case 'speed_demon': return getReactionPB() <= 300;
+    case 'elite_mind': return h.some(e => e.type === 'reaction' && e.difficulty === 'elite');
+    case 'judgment_master': {
+      const modes = new Set(h.filter(e => e.type === 'drill').map(e => e.mode));
+      return modes.has(1) && modes.has(2) && modes.has(3) && modes.has(4);
+    }
+    default: return false;
+  }
+}
+
+function renderBadges() {
+  const plan = getCurrentPlan(); const grid = document.getElementById('badges-grid');
+  grid.innerHTML = BADGE_DEFS.map(b => {
+    const needsHigherPlan = b.plan !== 'all' && !isPlanAtLeast(b.plan);
+    const earned = !needsHigherPlan && checkBadgeEarned(b);
+    if (needsHigherPlan) {
+      return '<div class="badge-item locked-plan" onclick="showUpgradeModal()" title="' + b.desc + '">' +
+        '<span class="badge-icon">🔒</span>' + b.name + '<span class="badge-lock-text">UNLEASHで解放</span></div>';
+    }
+    return '<div class="badge-item' + (earned ? ' earned' : '') + '" title="' + b.desc + '">' +
+      '<span class="badge-icon">' + (earned ? b.icon : '○') + '</span>' + b.name + '</div>';
+  }).join('');
+}
+
+function onPlanBadgeClick() { if (getCurrentPlan() === 'lite') showUpgradeModal(); }
+
+/* ━━━ MODE SELECT ━━━ */
+function showModeSelect() { showScreen('screen-mode-select'); }
+function selectMode(mode) { state.selectedMode = mode; initSettingsUI(); showScreen('screen-settings'); }
+function initSettingsUI() {
+  setupOptionGroup('interval-options', state.settings.interval, val => { state.settings.interval = val; });
+  setupOptionGroup('reps-options', String(state.settings.reps), val => { state.settings.reps = parseInt(val) || 0; });
+}
+function setupOptionGroup(containerId, activeVal, onChange) {
+  const container = document.getElementById(containerId);
+  container.querySelectorAll('.settings-opt').forEach(opt => {
+    opt.classList.toggle('active', opt.dataset.val === String(activeVal));
+    opt.onclick = () => { container.querySelectorAll('.settings-opt').forEach(o => o.classList.remove('active')); opt.classList.add('active'); onChange(opt.dataset.val); };
+  });
+}
+
+/* ━━━ DRILL ━━━ */
+function getInterval() { return state.settings.interval === 'random' ? 1000 + Math.random() * 4000 : parseFloat(state.settings.interval) * 1000; }
+function getMaxNumber(mode) { return (mode === 2 || mode === 3) ? 2 : 3; }
+function getModeLabel(mode) { const l = { 1:'DRIBBLE', 2:'3x3 BASIC', 3:'3x3 ADVANCED', 4:'5v5' }; return 'MODE ' + mode + ' — ' + (l[mode]||''); }
+
+function startDrill() {
+  ensureAudioContext();
+  const d = state.drill; d.count = 0; d.total = state.settings.reps || Infinity; d.running = true;
+  document.getElementById('hud-mode').textContent = getModeLabel(state.selectedMode);
+  document.getElementById('hud-count').textContent = '0';
+  document.getElementById('hud-total').textContent = d.total === Infinity ? '∞' : d.total;
+  document.getElementById('hud-timer').textContent = '0:00';
+  document.getElementById('drill-number').textContent = ''; document.getElementById('drill-number').classList.remove('visible');
+  showScreen('screen-training'); drillCountdown(3);
+}
+function drillCountdown(n) {
+  const el = document.getElementById('drill-number');
+  if (n <= 0) { playBeep(880, 0.3); d_startTimerTick(); scheduleNextFlash(); return; }
+  playBeep({ 3:440, 2:550, 1:660 }[n] || 440, 0.1);
+  el.textContent = n; el.classList.add('visible');
+  setTimeout(() => { el.classList.remove('visible'); setTimeout(() => drillCountdown(n - 1), 200); }, 700);
+}
+function d_startTimerTick() {
+  state.drill.timerStart = Date.now();
+  state.drill.timerId = setInterval(() => { if (!state.drill.running) return; const e = Math.floor((Date.now()-state.drill.timerStart)/1000); document.getElementById('hud-timer').textContent = Math.floor(e/60)+':'+String(e%60).padStart(2,'0'); }, 500);
+}
+function scheduleNextFlash() {
+  if (!state.drill.running) return; const d = state.drill;
+  if (d.total !== Infinity && d.count >= d.total) { finishDrill(); return; }
+  d.numberId = setTimeout(() => {
+    if (!state.drill.running) return;
+    const num = Math.floor(Math.random() * getMaxNumber(state.selectedMode)) + 1;
+    const el = document.getElementById('drill-number'); el.textContent = num; el.classList.add('visible');
+    d.count++; document.getElementById('hud-count').textContent = d.count;
+    setTimeout(() => { el.classList.remove('visible'); scheduleNextFlash(); }, 900);
+  }, getInterval());
+}
+function finishDrill() {
+  state.drill.running = false; clearInterval(state.drill.timerId); clearTimeout(state.drill.numberId);
+  const e = Math.floor((Date.now()-state.drill.timerStart)/1000); const timeStr = Math.floor(e/60)+':'+String(e%60).padStart(2,'0');
+  saveToHistory({ date: new Date().toISOString(), type:'drill', mode:state.selectedMode, modeLabel:getModeLabel(state.selectedMode), reps:state.drill.count, time:timeStr });
+  recordHeatmap();
+  const prev = getTitle(getSessionCount()-1); const cur = getTitle();
+  showResult({ badge:'🏀', title:'DRILL COMPLETE', subtitle:getModeLabel(state.selectedMode)+' — '+new Date().toLocaleDateString('ja-JP'),
+    stats:[{value:state.drill.count,label:'表示回数'},{value:timeStr,label:'タイム'},{value:cur||'—',label:'称号'}],
+    message:'集中力と判断力が鍛えられた。継続が力になる。', titleChanged:prev!==cur?cur:null,
+    actions:[{text:'もう一度',primary:true,action:'startDrill()'},{text:'ホームに戻る',primary:false,action:"showScreen('screen-home')"}] });
+}
+function abortDrill() { state.drill.running = false; clearInterval(state.drill.timerId); clearTimeout(state.drill.numberId); showScreen('screen-home'); }
+
+/* ━━━ REACTION SELECT ② ━━━ */
+function showReactionSelect() { showScreen('screen-reaction-select'); }
+function renderReactionSelect() {
+  const container = document.getElementById('reaction-difficulty-cards');
+  const sessions = getSessionCount(); const plan = getCurrentPlan();
+  container.innerHTML = Object.values(REACTION_DIFFICULTIES).map(d => {
+    const sessionLocked = sessions < d.unlockAt;
+    /* ② HARD/ELITEはUNLEASH/PRO限定 */
+    const planLocked = (d.key === 'hard' || d.key === 'elite') && !isPlanAtLeast('unleash');
+    const isLocked = sessionLocked || planLocked;
+    let lockInfo = '';
+    if (planLocked) {
+      lockInfo = '<div class="lock-info">🔒 UNLEASHで解放</div>';
+    } else if (sessionLocked) {
+      lockInfo = '<div class="lock-info">🔒 累計' + d.unlockAt + '回で解放</div>';
+    }
+    const cls = planLocked ? ' plan-locked' : (sessionLocked ? ' locked' : '');
+    const onclick = isLocked
+      ? (planLocked ? 'onclick="showUpgradeModal()"' : '')
+      : 'onclick="startReactionWithDifficulty(\'' + d.key + '\')"';
+    return '<div class="mode-card' + cls + '" ' + onclick + '>' +
+      '<div class="mode-card-title">' + d.name + '</div><div class="mode-card-desc">' + d.desc + '</div>' +
+      '<div class="mode-legend"><div class="mode-legend-item">記号: ' + d.symbols.join(' ') + '</div>' +
+      '<div class="mode-legend-item">間隔: ' + (d.intervalMin/1000) + '〜' + (d.intervalMax/1000) + '秒</div></div>' +
+      lockInfo + '</div>';
+  }).join('');
+}
+
+function checkUnlocks() {
+  const sessions = getSessionCount(); const unlocked = JSON.parse(localStorage.getItem('ascent_unlocked') || '{}');
+  if (!isPlanAtLeast('unleash')) return;
+  const toCheck = [{ key:'hard', at:30, text:'HARD MODE UNLOCKED' },{ key:'elite', at:100, text:'ELITE MODE UNLOCKED' }];
+  for (const u of toCheck) { if (sessions >= u.at && !unlocked[u.key]) { unlocked[u.key] = true; localStorage.setItem('ascent_unlocked', JSON.stringify(unlocked)); showUnlockOverlay(u.text); return; } }
+}
+function showUnlockOverlay(text) {
+  document.getElementById('unlock-text').textContent = text;
+  document.getElementById('unlock-overlay').classList.add('active');
+  spawnParticles(); playBeep(880, 0.3);
+  setTimeout(() => document.getElementById('unlock-overlay').classList.remove('active'), 2500);
+}
+
+/* ━━━ REACTION ━━━ */
+function startReactionWithDifficulty(diffKey) { ensureAudioContext(); state.reaction.difficulty = diffKey; startReactionMode(); }
+function startReactionMode() {
+  const diff = REACTION_DIFFICULTIES[state.reaction.difficulty] || REACTION_DIFFICULTIES.normal;
+  const r = state.reaction; r.count = 0; r.total = diff.total; r.correct = 0; r.times = []; r.running = true; r.timerStart = Date.now();
+  document.getElementById('reaction-count').textContent = '0'; document.getElementById('reaction-total').textContent = r.total;
+  document.getElementById('reaction-timer').textContent = '0:00';
+  const sym = document.getElementById('reaction-symbol'); sym.textContent = ''; sym.classList.remove('visible','is-go','is-nogo');
+  showScreen('screen-reaction');
+  r.timerId = setInterval(() => { if (!r.running) return; const e = Math.floor((Date.now()-r.timerStart)/1000); document.getElementById('reaction-timer').textContent = Math.floor(e/60)+':'+String(e%60).padStart(2,'0'); }, 500);
+  document.getElementById('reaction-tap').onclick = reactionTap;
+  reactionCountdown(3);
+}
+function reactionCountdown(n) {
+  const sym = document.getElementById('reaction-symbol');
+  if (n <= 0) { playBeep(880, 0.3); sym.textContent = ''; sym.classList.remove('visible','is-go','is-nogo'); setTimeout(() => scheduleReactionSymbol(), 500); return; }
+  playBeep({ 3:440, 2:550, 1:660 }[n]||440, 0.1);
+  sym.textContent = n; sym.className = 'reaction-symbol visible'; sym.style.color = 'var(--text-muted)';
+  setTimeout(() => { sym.classList.remove('visible'); setTimeout(() => reactionCountdown(n-1), 200); }, 700);
+}
+function scheduleReactionSymbol() {
+  if (!state.reaction.running) return; const r = state.reaction;
+  if (r.count >= r.total) { finishReaction(); return; }
+  const diff = REACTION_DIFFICULTIES[r.difficulty] || REACTION_DIFFICULTIES.normal;
+  r.hideId = setTimeout(() => {
+    if (!r.running) return;
+    const symbol = diff.symbols[Math.floor(Math.random() * diff.symbols.length)];
+    r.currentIsGo = diff.goSymbols.includes(symbol); r.responded = false; r.showTime = Date.now(); r.count++;
+    document.getElementById('reaction-count').textContent = r.count;
+    const sym = document.getElementById('reaction-symbol'); sym.textContent = symbol; sym.style.color = '';
+    sym.className = 'reaction-symbol visible ' + (r.currentIsGo ? 'is-go' : 'is-nogo');
+    setTimeout(() => { sym.classList.remove('visible'); if (!r.responded && !r.currentIsGo) r.correct++; setTimeout(() => scheduleReactionSymbol(), 300); }, 800);
+  }, diff.intervalMin + Math.random() * (diff.intervalMax - diff.intervalMin));
+}
+function reactionTap() {
+  const r = state.reaction; if (!r.running) return;
+  const sym = document.getElementById('reaction-symbol'); if (!sym.classList.contains('visible') || r.responded) return;
+  r.responded = true; if (r.currentIsGo) { r.correct++; r.times.push(Date.now() - r.showTime); }
+  sym.classList.remove('visible');
+}
+function showPBFlash(prevBest, newBest) {
+  playBeep(880, 0.3); document.getElementById('pb-flash-sub').textContent = '前回ベスト比 -' + (prevBest - newBest) + 'ms 更新！';
+  document.getElementById('pb-flash').classList.add('active'); spawnParticles();
+  setTimeout(() => document.getElementById('pb-flash').classList.remove('active'), 1500);
+}
+function finishReaction() {
+  const r = state.reaction; r.running = false; clearInterval(r.timerId); clearTimeout(r.hideId);
+  const avgTime = r.times.length > 0 ? Math.round(r.times.reduce((a,b) => a+b, 0) / r.times.length) : 0;
+  const rate = Math.round((r.correct / r.total) * 100);
+  const prevPB = getReactionPB(); let isPBUpdate = false;
+  if (avgTime > 0 && avgTime < prevPB) { isPBUpdate = true; setReactionPB(avgTime); }
+  if (avgTime > 0) addPBHistory(avgTime);
+  saveToHistory({ date: new Date().toISOString(), type:'reaction', modeLabel:'REACTION — '+(REACTION_DIFFICULTIES[r.difficulty]||{}).name, difficulty:r.difficulty, correct:r.correct, total:r.total, rate:rate, avgTime:avgTime, bestTime: r.times.length > 0 ? Math.min(...r.times) : 0 });
+  recordHeatmap();
+  const prev = getTitle(getSessionCount()-1); const cur = getTitle();
+  let pbHtml = '';
+  if (avgTime > 0) {
+    if (isPBUpdate) { pbHtml = '<div class="pb-comparison">今回 <strong>'+avgTime+'ms</strong> / <span class="pb-diff-better">⚡ 自己ベスト更新！ -'+(prevPB===9999?0:prevPB-avgTime)+'ms</span></div>'; }
+    else if (getReactionPB() < 9999) { pbHtml = '<div class="pb-comparison">今回 <strong>'+avgTime+'ms</strong> / 自己ベスト '+getReactionPB()+'ms / <span class="pb-diff-worse">+'+(avgTime-getReactionPB())+'ms</span></div>'; }
+  }
+  if (isPBUpdate && prevPB < 9999) showPBFlash(prevPB, avgTime);
+  const diffName = (REACTION_DIFFICULTIES[r.difficulty]||{}).name || 'NORMAL';
+  state._lastReactionResult = { avgTime: avgTime, diffName: diffName };
+  showResult({ badge:'⚡', title:'REACTION COMPLETE', subtitle:diffName+' — '+new Date().toLocaleDateString('ja-JP'),
+    stats:[{value:avgTime+'ms',label:'平均反応速度'},{value:rate+'%',label:'正答率'},{value:r.correct+'/'+r.total,label:'正解数'}], pbHtml:pbHtml,
+    message: avgTime<=300?'驚異的な反応速度！試合でも活きる判断力だ。':avgTime<=500?'良い反応速度。継続でさらに速くなる。':'反応速度は鍛えられる。毎日の反復が鍵だ。',
+    titleChanged:prev!==cur?cur:null,
+    actions:[{text:'もう一度',primary:true,action:"startReactionWithDifficulty('"+r.difficulty+"')"},{text:'結果をシェア',primary:false,action:'shareReactionResult()',isShare:true},{text:'ホームに戻る',primary:false,action:"showScreen('screen-home')"}] });
+}
+function abortReaction() { state.reaction.running=false; clearInterval(state.reaction.timerId); clearTimeout(state.reaction.hideId); showScreen('screen-home'); }
+
+function shareReactionResult() {
+  const data = state._lastReactionResult; if (!data) return;
+  const text = '反応速度 '+data.avgTime+'ms を記録しました 🏀⚡ #ASCENT #バスケ #判断力';
+  const url = 'https://stepbystep-ascent.com';
+  if (navigator.share) { navigator.share({text:text,url:url}).catch(()=>{}); }
+  else { navigator.clipboard.writeText(text+'\n'+url).then(()=>showToast('クリップボードにコピーしました')).catch(()=>showToast('シェアに失敗しました')); }
+}
+
+/* ━━━ SHOOT RECORD ━━━ */
+function showShootSelect() { showScreen('screen-shoot-select'); }
+function startShootRecord(type) { state.shoot={made:0,total:0,type:type}; document.getElementById('shoot-type-label').textContent=type+' SHOT'; updateShootDisplay(); showScreen('screen-shoot-record'); }
+function recordShot(made) { state.shoot.total++; if(made) state.shoot.made++; updateShootDisplay(); }
+function updateShootDisplay() { const s=state.shoot; const rate=s.total>0?Math.round((s.made/s.total)*100):0; document.getElementById('shoot-rate').textContent=rate+'%'; document.getElementById('shoot-detail').textContent=s.total+'本中 '+s.made+'本成功'; }
+function finishShootRecord() {
+  const s=state.shoot; if(s.total===0){showScreen('screen-home');return;}
+  const rate=Math.round((s.made/s.total)*100);
+  saveToHistory({date:new Date().toISOString(),type:'shoot',modeLabel:'SHOOT — '+s.type,shotType:s.type,made:s.made,total:s.total,rate:rate}); recordHeatmap();
+  const prev=getTitle(getSessionCount()-1);const cur=getTitle();
+  showResult({badge:'🎯',title:'SESSION COMPLETE',subtitle:s.type+' SHOT — '+new Date().toLocaleDateString('ja-JP'),
+    stats:[{value:s.made+'/'+s.total,label:'シュート'},{value:rate+'%',label:'成功率'}],statsCols:2,
+    message:rate>=80?'素晴らしい成功率！この調子を維持しよう。':rate>=50?'安定した確率。フォームを意識して継続しよう。':'シュートは反復が全て。明日も打ち続けよう。',
+    titleChanged:prev!==cur?cur:null,actions:[{text:'もう一度記録する',primary:true,action:"startShootRecord('"+s.type+"')"},{text:'ホームに戻る',primary:false,action:"showScreen('screen-home')"}]});
+}
+
+/* ━━━ RESULT ━━━ */
+function showResult(opts) {
+  document.getElementById('result-badge').textContent=opts.badge; document.getElementById('result-title').textContent=opts.title;
+  document.getElementById('result-subtitle').textContent=opts.subtitle; document.getElementById('result-message').textContent=opts.message;
+  const statsEl=document.getElementById('result-stats'); statsEl.className='result-stats'+(opts.statsCols===2?' two-col':'');
+  statsEl.innerHTML=opts.stats.map(s=>'<div class="stat-box"><span class="stat-value">'+s.value+'</span><span class="stat-label">'+s.label+'</span></div>').join('');
+  document.getElementById('result-pb-comparison').innerHTML=opts.pbHtml||'';
+  const tcEl=document.getElementById('result-title-change'); tcEl.innerHTML=opts.titleChanged?'<div class="result-title-change">称号UP! → '+opts.titleChanged+'</div>':'';
+  document.getElementById('result-actions').innerHTML=opts.actions.map(a=>{
+    if(a.isShare) return '<button class="btn-share" onclick="'+a.action+'">'+a.text+'</button>';
+    return '<button class="'+(a.primary?'btn-primary':'btn-secondary')+'" onclick="'+a.action+'">'+a.text+'</button>';
+  }).join('');
+  showScreen('screen-result'); spawnParticles(); if(opts.titleChanged) setTimeout(()=>spawnParticles(),500);
+}
+
+/* ━━━ PARTICLES ━━━ */
+function spawnParticles() {
+  const c=document.getElementById('particles');
+  for(let i=0;i<40;i++){const p=document.createElement('div');p.className='particle';p.style.left=Math.random()*100+'%';p.style.top='-10px';p.style.width=(3+Math.random()*6)+'px';p.style.height=p.style.width;p.style.opacity=(0.4+Math.random()*0.6).toString();p.style.animationDuration=(1.5+Math.random()*2.5)+'s';p.style.animationDelay=(Math.random()*1)+'s';c.appendChild(p);setTimeout(()=>p.remove(),5000);}
+}
+
+/* ━━━ HISTORY ━━━ */
+function showHistory(){showScreen('screen-history');}
+function updateHistoryScreen(){
+  document.getElementById('total-sessions').textContent=getSessionCount(); document.getElementById('total-title').textContent=getTitle();
+  const h=getHistory(); const el=document.getElementById('history-entries');
+  if(!h.length){el.innerHTML='<div class="empty-records">まだ記録がありません。</div>';return;}
+  el.innerHTML=h.map(h=>{const d=new Date(h.date);const ds=d.getFullYear()+'/'+(d.getMonth()+1)+'/'+d.getDate()+' '+d.getHours()+':'+String(d.getMinutes()).padStart(2,'0');
+    let det='';if(h.type==='drill')det=h.reps+'回 / '+h.time;else if(h.type==='reaction')det='反応 '+h.avgTime+'ms / 正答率 '+h.rate+'%';else if(h.type==='shoot')det=h.made+'/'+h.total+' ('+h.rate+'%)';
+    return '<div class="history-entry"><div class="history-entry-header"><span class="history-entry-date">'+ds+'</span><span class="history-entry-score">'+(h.rate!==undefined?h.rate+'%':h.reps+'回')+'</span></div><div class="history-entry-detail">'+det+'</div><span class="history-entry-type">'+(h.modeLabel||'')+'</span></div>';
+  }).join('');
+}
+
+function showToast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2500);}
+
+/* ━━━ INIT ━━━ */
+function init(){
+  document.getElementById('login-btn').addEventListener('click',login);
+  document.getElementById('password-input').addEventListener('keydown',e=>{if(e.key==='Enter')login();});
+  document.getElementById('logout-btn').addEventListener('click',logout);
+  getSessionCount();
+  document.querySelectorAll('.volume-slider').forEach(s=>s.value=state.volume*100);
+  document.querySelectorAll('.volume-val').forEach(v=>v.textContent=Math.round(state.volume*100)+'%');
+  setTimeout(()=>{
+    document.getElementById('loading').classList.add('hidden');
+    if(isAuthValid()&&localStorage.getItem('currentPlan')){showScreen('screen-home');}else{showScreen('screen-login');}
+  },1200);
+}
+document.addEventListener('DOMContentLoaded',init);
+
+if('serviceWorker' in navigator){window.addEventListener('load',()=>{navigator.serviceWorker.register('/sw.js').then(r=>console.log('SW registered:',r.scope)).catch(e=>console.log('SW failed:',e));});}
+</script>
+</body>
+</html>
