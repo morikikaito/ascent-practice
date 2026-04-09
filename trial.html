@@ -320,6 +320,17 @@ input[type="file"] {
 </head>
 <body>
 
+<!-- PHASE: Resume Dialog -->
+<div id="phase-resume" class="phase">
+  <h1>ASCENT</h1>
+  <p class="subtitle">AI SHOOT DIAGNOSIS</p>
+  <div class="card">
+    <p style="font-size:1rem;line-height:1.8;margin-bottom:24px;color:var(--text);">前回の診断が途中で中断されています。<br>途中から再開しますか？</p>
+    <button id="btn-resume" class="btn-gold" style="margin-bottom:12px;width:100%;">再開する</button>
+    <button id="btn-restart" class="btn-gold" style="width:100%;background:#141418;color:var(--gold);border:1px solid var(--border);">最初からやり直す</button>
+  </div>
+</div>
+
 <!-- PHASE 0: Already Diagnosed -->
 <div id="phase-diagnosed" class="phase">
   <h1>ASCENT</h1>
@@ -561,6 +572,41 @@ let videoMimeType = null;
 let conversationHistory = [];
 let questionCount = 0;
 let selectedChoice = null;
+let currentSpecs = null;
+let lastQuestionText = null;
+
+// ============================================================
+// STATE PERSISTENCE
+// ============================================================
+function saveState(phase) {
+  const state = {
+    phase: phase,
+    specs: currentSpecs,
+    questionCount: questionCount,
+    conversationHistory: conversationHistory,
+    videoBase64: videoBase64,
+    videoMimeType: videoMimeType,
+    lastQuestionText: lastQuestionText
+  };
+  try {
+    localStorage.setItem('ascent_trial_state', JSON.stringify(state));
+  } catch (e) {
+    console.warn('State save failed (storage full?):', e);
+  }
+}
+
+function loadState() {
+  try {
+    const raw = localStorage.getItem('ascent_trial_state');
+    return raw ? JSON.parse(raw) : null;
+  } catch (e) {
+    return null;
+  }
+}
+
+function clearState() {
+  localStorage.removeItem('ascent_trial_state');
+}
 
 // ============================================================
 // PHASE MANAGEMENT
@@ -581,12 +627,59 @@ document.addEventListener('DOMContentLoaded', () => {
   const trialUsed = localStorage.getItem('ascent_trial_used');
   if (trialUsed) {
     showPhase('phase-diagnosed');
+    return;
+  }
+
+  const savedState = loadState();
+  if (savedState && savedState.phase) {
+    // Show resume dialog
+    showPhase('phase-resume');
+    document.getElementById('btn-resume').addEventListener('click', () => {
+      resumeFromState(savedState);
+    });
+    document.getElementById('btn-restart').addEventListener('click', () => {
+      clearState();
+      showPhase('phase-upload');
+    });
   } else {
     showPhase('phase-upload');
   }
+
   initUpload();
   initSpecForm();
 });
+
+function resumeFromState(state) {
+  videoBase64 = state.videoBase64 || null;
+  videoMimeType = state.videoMimeType || null;
+  conversationHistory = state.conversationHistory || [];
+  questionCount = state.questionCount || 0;
+  currentSpecs = state.specs || null;
+  lastQuestionText = state.lastQuestionText || null;
+
+  const phase = state.phase;
+
+  if (phase === 'spec' && videoBase64) {
+    showPhase('phase-spec');
+    if (currentSpecs) {
+      document.getElementById('spec-age').value = currentSpecs.age || '';
+      document.getElementById('spec-height').value = currentSpecs.height || '';
+      document.getElementById('spec-weight').value = currentSpecs.weight || '';
+      document.getElementById('spec-gender').value = currentSpecs.gender || '男';
+      document.getElementById('spec-hand').value = currentSpecs.hand || '右';
+      document.getElementById('spec-sender').value = currentSpecs.sender || '本人';
+    }
+  } else if (phase === 'question' && lastQuestionText) {
+    showQuestion(lastQuestionText);
+  } else if (phase === 'processing' && currentSpecs && videoBase64) {
+    // Re-run diagnosis from specs
+    startDiagnosis(currentSpecs);
+  } else {
+    // Can't resume meaningfully, start over
+    clearState();
+    showPhase('phase-upload');
+  }
+}
 
 // ============================================================
 // PHASE 1: VIDEO UPLOAD
@@ -679,6 +772,7 @@ async function validateVideo() {
     const answer = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim().toUpperCase() || '';
 
     if (answer.includes('YES')) {
+      saveState('spec');
       showPhase('phase-spec');
     } else {
       showUploadError('バスケットボールのシュート動画を送ってください。\n別の動画を選択して、もう一度お試しください。');
@@ -719,6 +813,8 @@ function initSpecForm() {
       hand: document.getElementById('spec-hand').value,
       sender: document.getElementById('spec-sender').value
     };
+    currentSpecs = specs;
+    saveState('processing');
     await startDiagnosis(specs);
   });
 }
@@ -769,6 +865,8 @@ async function startDiagnosis(specs) {
     });
 
     questionCount = 1;
+    lastQuestionText = responseText;
+    saveState('question');
     showQuestion(responseText);
   } catch (e) {
     console.error(e);
@@ -892,6 +990,8 @@ async function submitAnswer() {
     if (questionCount > 3) {
       showResult(responseText);
     } else {
+      lastQuestionText = responseText;
+      saveState('question');
       showQuestion(responseText);
     }
   } catch (e) {
@@ -910,7 +1010,8 @@ function showResult(text) {
   showPhase('phase-result');
   document.getElementById('result-content').textContent = text;
 
-  // Set trial used flag
+  // Clear progress state and set trial used flag
+  clearState();
   localStorage.setItem('ascent_trial_used', 'true');
 
   // Show bottom banner
