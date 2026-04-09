@@ -583,6 +583,10 @@ let selectedChoice = null;
 let currentSpecs = null;
 let lastQuestionText = null;
 
+// UID & user tier
+let lineUid = 'anonymous';
+let userTier = 'free'; // 'free' | 'lite' | 'vip'
+
 // ============================================================
 // STATE PERSISTENCE
 // ============================================================
@@ -631,7 +635,20 @@ function showPhase(id) {
 // ============================================================
 // INIT
 // ============================================================
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
+  // Get LINE UID from URL params
+  const params = new URLSearchParams(window.location.search);
+  const uidParam = params.get('uid');
+  if (uidParam) {
+    lineUid = uidParam;
+    localStorage.setItem('ascent_trial_uid', uidParam);
+  } else {
+    lineUid = localStorage.getItem('ascent_trial_uid') || 'anonymous';
+  }
+
+  // Check paid/free tier from Airtable
+  await checkUserTier();
+
   const trialUsed = localStorage.getItem('ascent_trial_used');
   if (trialUsed) {
     showPhase('phase-diagnosed');
@@ -640,7 +657,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const savedState = loadState();
   if (savedState && savedState.phase) {
-    // Show resume dialog
     showPhase('phase-resume');
     document.getElementById('btn-resume').addEventListener('click', () => {
       resumeFromState(savedState);
@@ -656,6 +672,32 @@ document.addEventListener('DOMContentLoaded', () => {
   initUpload();
   initSpecForm();
 });
+
+async function checkUserTier() {
+  if (lineUid === 'anonymous') return;
+  try {
+    const formula = encodeURIComponent(`{LINE ID}='${lineUid}'`);
+    const url = `https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/${AIRTABLE_TABLE_CUSTOMERS}?filterByFormula=${formula}&maxRecords=1`;
+    const res = await fetch(url, {
+      headers: { 'Authorization': `Bearer ${AIRTABLE_API_KEY}` }
+    });
+    if (!res.ok) return;
+    const data = await res.json();
+    if (data.records && data.records.length > 0) {
+      const fields = data.records[0].fields;
+      const hasUnleash = fields['fldMdXQ1KVrOjPkrA'] === true;
+      const hasPro = fields['fldsm6toargqzNba6'] === true;
+      const hasLite = fields['fldx9r5emLQAN2y0u'] === true;
+      if (hasUnleash || hasPro) {
+        userTier = 'vip';
+      } else if (hasLite) {
+        userTier = 'lite';
+      }
+    }
+  } catch (e) {
+    console.error('Tier check failed:', e);
+  }
+}
 
 function resumeFromState(state) {
   videoBase64 = state.videoBase64 || null;
@@ -1020,17 +1062,72 @@ async function submitAnswer() {
 // ============================================================
 function showResult(text) {
   showPhase('phase-result');
-  document.getElementById('result-content').textContent = text;
+
+  const resultEl = document.getElementById('result-content');
+
+  if (userTier === 'vip') {
+    // VIP: show full result + LINE guidance
+    resultEl.innerHTML = formatResultText(text)
+      + '<div style="margin-top:24px;padding:16px;background:var(--bg-elevated);border:1px solid var(--border);border-radius:8px;text-align:center;color:var(--gold);font-size:0.9rem;line-height:1.8;">改善メニューはLINEで確認してください。<br>開斗が設計したあなた専用のメニューが届きます。</div>';
+    // Hide UNLEASH banner for VIP
+    document.getElementById('bottom-banner').classList.remove('show');
+  } else if (userTier === 'lite') {
+    // LITE: show full result + UNLEASH upgrade nudge
+    resultEl.innerHTML = formatResultText(text)
+      + '<div style="margin-top:24px;padding:16px;background:var(--bg-elevated);border:1px solid var(--border);border-radius:8px;text-align:center;color:var(--text-muted);font-size:0.9rem;line-height:1.8;">改善メニューはUNLEASHプランで提供しています。<br><a href="' + UNLEASH_URL + '" target="_blank" style="color:var(--gold);text-decoration:underline;">UNLEASHプランに切り替える →</a></div>';
+    document.getElementById('bottom-banner').classList.add('show');
+  } else {
+    // FREE: show only 1st cause, lock the rest
+    resultEl.innerHTML = formatFreeResult(text);
+    document.getElementById('bottom-banner').classList.add('show');
+  }
 
   // Clear progress state and set trial used flag
   clearState();
   localStorage.setItem('ascent_trial_used', 'true');
 
-  // Show bottom banner
-  document.getElementById('bottom-banner').classList.add('show');
-
   // Save to Airtable (fire-and-forget)
   saveToAirtable(text);
+}
+
+function formatResultText(text) {
+  return '<div style="white-space:pre-wrap;line-height:1.9;">' + escapeHtml(text) + '</div>';
+}
+
+function formatFreeResult(text) {
+  // Split by numbered causes (e.g. "原因1" "原因2" or numbered patterns)
+  const lines = text.split('\n');
+  let firstCauseEnd = -1;
+  let causeCount = 0;
+
+  for (let i = 0; i < lines.length; i++) {
+    if (lines[i].match(/原因[②③④⑤⑥⑦⑧⑨⑩2-9]|【原因[2-9]|【[2-9]つ目/)) {
+      if (firstCauseEnd === -1) firstCauseEnd = i;
+      causeCount++;
+    }
+  }
+
+  if (firstCauseEnd > 0) {
+    const visiblePart = lines.slice(0, firstCauseEnd).join('\n');
+    const lockedHtml = '<div style="margin-top:20px;padding:20px;background:rgba(201,168,76,0.06);border:1px solid var(--border);border-radius:8px;text-align:center;">'
+      + '<p style="font-size:1.2rem;margin-bottom:8px;">🔒</p>'
+      + '<p style="color:var(--text-muted);font-size:0.9rem;line-height:1.8;">残りの原因と改善メニューは<br>UNLEASHプランで完全公開しています。</p>'
+      + '<a href="' + UNLEASH_URL + '" target="_blank" class="btn-gold" style="margin-top:12px;display:inline-block;">UNLEASHプランに入会する →</a>'
+      + '</div>';
+    return '<div style="white-space:pre-wrap;line-height:1.9;">' + escapeHtml(visiblePart) + '</div>' + lockedHtml;
+  }
+
+  // Fallback: show full text + lock message
+  return '<div style="white-space:pre-wrap;line-height:1.9;">' + escapeHtml(text) + '</div>'
+    + '<div style="margin-top:20px;padding:20px;background:rgba(201,168,76,0.06);border:1px solid var(--border);border-radius:8px;text-align:center;">'
+    + '<p style="font-size:1.2rem;margin-bottom:8px;">🔒</p>'
+    + '<p style="color:var(--text-muted);font-size:0.9rem;line-height:1.8;">残りの原因と改善メニューは<br>UNLEASHプランで完全公開しています。</p>'
+    + '<a href="' + UNLEASH_URL + '" target="_blank" class="btn-gold" style="margin-top:12px;display:inline-block;">UNLEASHプランに入会する →</a>'
+    + '</div>';
+}
+
+function escapeHtml(str) {
+  return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 }
 
 // ============================================================
@@ -1070,6 +1167,7 @@ async function saveToAirtable(finalDiagnosisText) {
   const customerRecord = {
     records: [{
       fields: {
+        'fld4RhAWdqYWt50XO': lineUid,
         'fldkNUgvWW3krnvo6': diagnosisStartTime || now,
         'fldrs8Y2lqU9MWaZF': now,
         'fldLNHW30ufTyMjxT': '体験版',
@@ -1093,7 +1191,7 @@ async function saveToAirtable(finalDiagnosisText) {
         'fldthaxMIyG1bS6gx': historyJson,
         'fld4BYepPDaArrvYp': answersText,
         'fldj3EWDv3k8bvrd7': finalDiagnosisText,
-        'fld30k5IyhncbtbNW': false
+        'fld30k5IyhncbtbNW': userTier === 'vip'
       }
     }]
   };
