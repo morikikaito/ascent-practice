@@ -1,0 +1,921 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#050507">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="ASCENT Practice">
+<link rel="manifest" href="/manifest.json">
+<title>ASCENT Practice | AI シュート診断</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Noto+Serif+JP:wght@300;400;500;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #050507;
+  --bg-card: #0d0d10;
+  --bg-elevated: #141418;
+  --gold: #C9A84C;
+  --gold-light: #e0c070;
+  --gold-dark: #9a7a2e;
+  --gold-glow: rgba(201,168,76,0.15);
+  --text: #F5F0E8;
+  --text-muted: rgba(245,240,232,0.55);
+  --text-dim: rgba(245,240,232,0.35);
+  --border: rgba(201,168,76,0.2);
+  --border-bright: rgba(201,168,76,0.5);
+  --success: #4CAF50;
+  --danger: #E53935;
+  --radius: 12px;
+  --radius-sm: 8px;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body {
+  height: 100%;
+  background: var(--bg); color: var(--text);
+  font-family: 'Noto Serif JP', serif;
+  -webkit-font-smoothing: antialiased;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+body {
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Screens */
+.phase {
+  display: none;
+  min-height: 100vh;
+  padding: 24px 16px 120px;
+  max-width: 480px;
+  margin: 0 auto;
+  animation: fadeIn 0.4s ease;
+}
+.phase.active {
+  display: block;
+}
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Typography */
+h1, h2, h3 {
+  font-family: 'Cinzel', serif;
+  color: var(--gold);
+}
+h1 {
+  font-size: 1.5rem;
+  text-align: center;
+  margin-bottom: 8px;
+  letter-spacing: 0.08em;
+}
+.subtitle {
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  margin-bottom: 32px;
+}
+
+/* Cards */
+.card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 24px 20px;
+  margin-bottom: 20px;
+}
+
+/* Buttons */
+.btn-gold {
+  display: block;
+  width: 100%;
+  padding: 16px 24px;
+  border: none;
+  border-radius: var(--radius);
+  background: linear-gradient(135deg, #d4a840 0%, #c9a84c 40%, #e8c96a 60%, #c9a84c 100%);
+  color: #050507;
+  font-family: 'Noto Serif JP', serif;
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+  text-align: center;
+  text-decoration: none;
+  transition: opacity 0.2s;
+}
+.btn-gold:active {
+  opacity: 0.85;
+}
+.btn-gold:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Upload area */
+.upload-area {
+  border: 2px dashed var(--border-bright);
+  border-radius: var(--radius);
+  padding: 48px 20px;
+  text-align: center;
+  cursor: pointer;
+  transition: border-color 0.2s, background 0.2s;
+  background: var(--bg-elevated);
+}
+.upload-area.dragover {
+  border-color: var(--gold);
+  background: var(--gold-glow);
+}
+.upload-area .icon {
+  font-size: 3rem;
+  margin-bottom: 12px;
+}
+.upload-area p {
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  line-height: 1.7;
+}
+.upload-area .filename {
+  color: var(--gold);
+  font-size: 0.85rem;
+  margin-top: 12px;
+  word-break: break-all;
+}
+input[type="file"] {
+  display: none;
+}
+
+/* Form */
+.form-group {
+  margin-bottom: 20px;
+}
+.form-group label {
+  display: block;
+  font-size: 0.85rem;
+  color: var(--gold-light);
+  margin-bottom: 6px;
+  font-weight: 500;
+}
+.form-group input,
+.form-group select {
+  width: 100%;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg-elevated);
+  color: var(--text);
+  font-family: 'Noto Serif JP', serif;
+  font-size: 1rem;
+  outline: none;
+  transition: border-color 0.2s;
+  -webkit-appearance: none;
+}
+.form-group input:focus,
+.form-group select:focus {
+  border-color: var(--gold);
+}
+.form-group select {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23C9A84C' fill='none' stroke-width='1.5'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 14px center;
+  padding-right: 36px;
+}
+
+/* Processing */
+.processing-msg {
+  text-align: center;
+  line-height: 2;
+  font-size: 0.95rem;
+  white-space: pre-line;
+}
+.spinner {
+  display: inline-block;
+  width: 40px;
+  height: 40px;
+  border: 3px solid var(--border);
+  border-top-color: var(--gold);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  margin: 24px auto;
+}
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+.dots::after {
+  content: '';
+  animation: dots 1.5s steps(4, end) infinite;
+}
+@keyframes dots {
+  0%   { content: ''; }
+  25%  { content: '.'; }
+  50%  { content: '..'; }
+  75%  { content: '...'; }
+}
+
+/* Question choices */
+.choice-btn {
+  display: block;
+  width: 100%;
+  padding: 14px 16px;
+  margin-bottom: 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg-elevated);
+  color: var(--text);
+  font-family: 'Noto Serif JP', serif;
+  font-size: 0.9rem;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 0.2s, background 0.2s;
+  line-height: 1.6;
+}
+.choice-btn:active,
+.choice-btn.selected {
+  border-color: var(--gold);
+  background: var(--gold-glow);
+}
+
+/* Result */
+.result-block {
+  white-space: pre-wrap;
+  line-height: 1.9;
+  font-size: 0.92rem;
+}
+.result-block h3 {
+  font-size: 1.1rem;
+  margin: 20px 0 8px;
+}
+.locked-card {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 24px 20px;
+  text-align: center;
+  margin-top: 20px;
+}
+.locked-card .lock-icon {
+  font-size: 2rem;
+  margin-bottom: 8px;
+}
+.locked-card p {
+  color: var(--text-muted);
+  font-size: 0.88rem;
+  line-height: 1.7;
+}
+
+/* Bottom banner */
+.bottom-banner {
+  position: fixed;
+  bottom: 0; left: 0; right: 0;
+  background: var(--bg-card);
+  border-top: 1px solid var(--border);
+  padding: 14px 16px;
+  z-index: 100;
+  display: none;
+}
+.bottom-banner.show {
+  display: block;
+}
+.bottom-banner .btn-gold {
+  max-width: 480px;
+  margin: 0 auto;
+  font-size: 0.95rem;
+}
+
+/* Error */
+.error-msg {
+  background: rgba(229,57,53,0.1);
+  border: 1px solid rgba(229,57,53,0.3);
+  border-radius: var(--radius-sm);
+  padding: 16px;
+  color: var(--text);
+  font-size: 0.9rem;
+  line-height: 1.8;
+  text-align: center;
+  margin-top: 16px;
+  white-space: pre-line;
+}
+
+/* Video preview */
+.video-preview {
+  width: 100%;
+  border-radius: var(--radius-sm);
+  margin-top: 12px;
+  max-height: 240px;
+  object-fit: contain;
+  background: #000;
+}
+
+/* Already diagnosed */
+.diagnosed-text {
+  text-align: center;
+  line-height: 2;
+  font-size: 0.95rem;
+  margin: 40px 0 32px;
+  white-space: pre-line;
+}
+</style>
+</head>
+<body>
+
+<!-- PHASE 0: Already Diagnosed -->
+<div id="phase-diagnosed" class="phase">
+  <h1>ASCENT</h1>
+  <p class="subtitle">AI SHOOT DIAGNOSIS</p>
+  <div class="card">
+    <div class="diagnosed-text">動画の送信ありがとうございます！
+申し訳ありません、AIシュート診断はお一人様1回限りとなっています。
+
+診断結果をもとに、次のステップへ進みたい方は
+UNLEASHプランをご検討ください👇</div>
+    <a href="https://buy.stripe.com/28EcN47bXbeA8G4bMHf7i0B" class="btn-gold" target="_blank">UNLEASHプランに入会する</a>
+  </div>
+  <p style="text-align:center;color:var(--text-muted);font-size:0.8rem;margin-top:16px;">Step By Step ASCENT 代表 森木 開斗</p>
+</div>
+
+<!-- PHASE 1: Video Upload -->
+<div id="phase-upload" class="phase">
+  <h1>ASCENT</h1>
+  <p class="subtitle">AI SHOOT DIAGNOSIS</p>
+  <div class="card">
+    <h2 style="font-size:1.1rem;margin-bottom:16px;text-align:center;">シュート動画をアップロード</h2>
+    <div id="upload-area" class="upload-area">
+      <div class="icon">🎥</div>
+      <p>タップして動画を選択<br>またはここにドラッグ＆ドロップ</p>
+      <div id="file-name" class="filename"></div>
+    </div>
+    <input type="file" id="file-input" accept="video/*">
+    <video id="video-preview" class="video-preview" style="display:none" controls></video>
+    <div id="upload-error" class="error-msg" style="display:none"></div>
+    <div id="upload-spinner" style="display:none;text-align:center;margin-top:20px;">
+      <div class="spinner"></div>
+      <p style="color:var(--text-muted);font-size:0.85rem;">動画を検証中<span class="dots"></span></p>
+    </div>
+    <button id="btn-upload" class="btn-gold" style="margin-top:20px;display:none;" disabled>動画を送信する</button>
+  </div>
+</div>
+
+<!-- PHASE 2: Spec Input -->
+<div id="phase-spec" class="phase">
+  <h1>ASCENT</h1>
+  <p class="subtitle">AI SHOOT DIAGNOSIS</p>
+  <div class="card">
+    <div class="processing-msg" style="margin-bottom:24px;">添削素材の送信ありがとうございます！🎥✨
+AIがシュートフォームの分析を開始しました。
+より正確な「あなた専用の診断」を行うために、続けて以下の【基本スペック】を入力してください！</div>
+    <form id="spec-form">
+      <div class="form-group">
+        <label>年齢</label>
+        <input type="number" id="spec-age" min="5" max="99" required placeholder="例: 14">
+      </div>
+      <div class="form-group">
+        <label>身長 (cm)</label>
+        <input type="number" id="spec-height" min="80" max="250" required placeholder="例: 165">
+      </div>
+      <div class="form-group">
+        <label>体重 (kg)</label>
+        <input type="number" id="spec-weight" min="15" max="200" required placeholder="例: 55">
+      </div>
+      <div class="form-group">
+        <label>性別</label>
+        <select id="spec-gender" required>
+          <option value="" disabled selected>選択してください</option>
+          <option value="男">男</option>
+          <option value="女">女</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>利き手</label>
+        <select id="spec-hand" required>
+          <option value="" disabled selected>選択してください</option>
+          <option value="右">右</option>
+          <option value="左">左</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>送信者</label>
+        <select id="spec-sender" required>
+          <option value="" disabled selected>選択してください</option>
+          <option value="本人">本人</option>
+          <option value="保護者">保護者</option>
+        </select>
+      </div>
+      <button type="submit" class="btn-gold">スペックを送信する</button>
+    </form>
+  </div>
+</div>
+
+<!-- PHASE 3: Processing -->
+<div id="phase-processing" class="phase">
+  <h1>ASCENT</h1>
+  <p class="subtitle">AI SHOOT DIAGNOSIS</p>
+  <div class="card" style="text-align:center;">
+    <div class="spinner"></div>
+    <div id="processing-text" class="processing-msg"></div>
+  </div>
+  <div id="processing-error" class="error-msg" style="display:none"></div>
+</div>
+
+<!-- PHASE 4: Questions -->
+<div id="phase-question" class="phase">
+  <h1>ASCENT</h1>
+  <p class="subtitle">AI SHOOT DIAGNOSIS</p>
+  <div class="card">
+    <div id="question-text" style="line-height:1.9;font-size:0.93rem;margin-bottom:20px;white-space:pre-wrap;"></div>
+    <div id="choices-container"></div>
+    <button id="btn-answer" class="btn-gold" style="margin-top:12px;display:none;">回答を送信する</button>
+  </div>
+  <div id="question-error" class="error-msg" style="display:none"></div>
+</div>
+
+<!-- PHASE 5: Result -->
+<div id="phase-result" class="phase">
+  <h1>ASCENT</h1>
+  <p class="subtitle">AI SHOOT DIAGNOSIS - RESULT</p>
+  <div class="card">
+    <div id="result-content" class="result-block"></div>
+  </div>
+  <div class="locked-card">
+    <div class="lock-icon">🔒</div>
+    <p>残りの原因と改善メニューは、UNLEASHプランで完全公開しています。</p>
+    <a href="https://buy.stripe.com/28EcN47bXbeA8G4bMHf7i0B" class="btn-gold" style="margin-top:16px;" target="_blank">UNLEASHプランに入会する</a>
+  </div>
+</div>
+
+<!-- Bottom Banner -->
+<div id="bottom-banner" class="bottom-banner">
+  <a href="https://buy.stripe.com/28EcN47bXbeA8G4bMHf7i0B" class="btn-gold" target="_blank">UNLEASHプランに入会する →</a>
+</div>
+
+<script>
+// ============================================================
+// CONFIG
+// ============================================================
+const GEMINI_API_KEY = 'YOUR_GEMINI_API_KEY';
+const GEMINI_ENDPOINT = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`;
+const UNLEASH_URL = 'https://buy.stripe.com/28EcN47bXbeA8G4bMHf7i0B';
+
+// ============================================================
+// SYSTEM PROMPT (verbatim from SKILL.md)
+// ============================================================
+const SYSTEM_PROMPT = `# ASCENT AIシュート診断エンジン・ミッション
+独自理論「ASCENT」に基づいたシュート診断を行う専門AIとして動作してください。
+あなたは送られてきた動画や写真と分析データを蓄積して自ら学習し、常に診断精度を高め続けます。
+
+【絶対ルール1】今後、プロンプト内に新しい理論やシステム（判断基準）が追加・更新された場合は、いかなる時もその「最新のシステム」を最優先事項として分析に適用してください。
+
+【絶対ルール2：小中学生向けの翻訳】診断対象は小中学生がメインです。内部での分析は高度なマスターデータで行いますが、出力する際は難しい専門用語（胸椎、進展、ベクトル、腸腰筋など）はそのまま使わず、「背中の真ん中」「まっすぐ伸ばす」「力の向き」「お腹の奥の筋肉」など、小学生でも直感的にイメージできる優しい言葉に翻訳して伝えてください。温かく励ますようなコーチのトーン（です・ます調）を徹底してください。
+
+# 1. 動作フローとフェーズ管理
+
+【フェーズ2：5択質問（計3回）】
+診断の精度を上げるため、以下の形式で質問を1回につき1つ投げてください。
+  1. 映像や写真から予測される「体の感覚」をAIが考えて出力
+  2. [1とは別の具体的な「体の感覚」]
+  3. [1,2とは別の具体的な「体の感覚」]
+  4. 上記以外の感覚（具体的な感覚をそのまま入力してください）
+  5. 正直よくわからない
+
+筋肉の硬さが原因なら、柔軟性テストを選択肢1〜3のいずれかに含めてください。
+選択肢4と5の文章は絶対に変更しないでください。
+
+【フェーズ3：最終診断結果】
+質問が3回終わったら結果を出力。
+冒頭で必ず「原因の総数（〇〇個あります！）」を提示。
+
+【体験版（非VIP）の出力ルール】：
+1つ目の原因のみ詳細解説し、残りは以下の文言で誘導：
+「残りの原因と改善メニューは、UNLEASHプランで完全公開しています。」
+→ https://buy.stripe.com/28EcN47bXbeA8G4bMHf7i0B
+
+# 2. 免責・禁止事項
+- 最後に必ず以下を記載：
+「※本分析は技術の向上を確実に保証するものではありません。プロのコーチが添削する際、結果が変わる可能性があります。」
+- 練習メニューの具体的な提案は禁止。
+
+# 3. 深掘り質問エンジン（2問目・3問目）のルール
+
+【前提条件・絶対ルール】
+あなたは「ASCENT」の超一流プロバスケットボールコーチであり、優秀なセールスマンです。
+「承知いたしました」などのAI返事や「---」区切り線、裏側の思考プロセスは絶対に書かないでください。
+お客様に送信するメッセージ本文「だけ」をいきなり出力してください。
+
+【絶対厳守ルール】
+1. 世間一般のバスケ理論を勝手に語ることは禁止。必ずASCENT独自ロジック（200項目・新理論・クワトロコア）に基づくこと。
+2. 練習メニュー（ドリル）の提案は絶対禁止。
+3. 返信の最後には必ず：
+「※本分析は技術の向上を確実に保証するものではありません。プロのコーチが添削する際、結果が変わる可能性があります。」
+
+【質問回数に応じた出力】
+- 回数1〜2：深掘り5択質問を出力
+- 回数3：最終診断結果を出力
+
+（出力フォーマット：深掘り質問）
+【質問：〇問目】
+（コーチとしての共感と、深掘りする質問文）
+1. 〇〇
+2. 〇〇
+3. 〇〇
+4. その他（ご自身の言葉で、具体的な感覚や理由を直接入力して教えてください！）
+5. 当てはまらない・わからない
+
+# 4. 診断用マスターデータ：ASCENT最新理論
+
+【最重要アップデート1：新・シュートミート理論（骨盤正対ステップ）】
+・「骨盤をリングに正対させること」を最優先のゴールとする。従来の「足を並行（パラレル）にする」という固定概念は完全に廃止。
+・移動しながらミートする場合、慣性によって骨盤が流されるため、「2歩目の足」の位置でこれを強制的に補正する。
+・リングに正対している場合、そのままスクエアで構える。移動時は2歩目の足を「半歩前」に出し骨盤のズレをロックする。
+・場所によって足の位置を変える：トップ・0度はパラレル（平行）、45度の場合そのサイド側の足を1歩前に出す。
+
+【最重要アップデート2：クワトロコア理論（体幹の4分割操作）】
+・体幹部を4つのコア（右上重心＝右肩甲骨、左上重心＝左肩甲骨、右下重心＝右骨盤、左下重心＝左骨盤）に分割し、それぞれを独立して稼働させる。
+・膝指導・腕指導の手打ちを避け、コアを起点として連動させる。
+・チェックポイント：腰で姿勢を作っていないか（胸椎9番あたりを使えているか）。膝主導になっていないか。骨盤（仙腸関節）から動けているか。肩甲骨を起点に腕を動かせているか。胸椎9番あたりを反らせ、お腹の奥の筋肉（大腰筋）がピンと張る感覚を作る。
+
+【ASCENT 3指標（世界唯一）】
+01 リリース連動角度：肩→肘→手首の直線性をAIが算出。骨格3点から直接計算。
+02 連動タイムラグ（★世界唯一）：下半身→上半身への力の伝達時間をフレーム単位で計測。
+03 骨盤正対スコア（★世界唯一）：シュートミート時の腰の向きを数値化。腰骨の傾き角度で計算。`;
+
+// ============================================================
+// VALIDATION PROMPT
+// ============================================================
+const VALIDATION_PROMPT = `以下の動画を確認してください。この動画は「バスケットボールのシュート動作」が映っていますか？
+
+【判定基準】
+・バスケットボールを使ったシュート動作が映っている（リングが映っていなくても、壁当てやフォーム練習などのシュート動作を含みます） → YES
+・バスケットボール以外のスポーツの動画（サッカー・野球・テニスなど） → NO
+・バスケットボールのシュート以外の動作（ドリブル・パスのみなど） → NO
+・人物が映っていない・動作が不明瞭な場合 → NO
+
+「YES」または「NO」の1単語のみを出力してください。理由・説明・その他の文章は一切不要です。`;
+
+// ============================================================
+// STATE
+// ============================================================
+let videoFile = null;
+let videoBase64 = null;
+let videoMimeType = null;
+let conversationHistory = [];
+let questionCount = 0;
+let selectedChoice = null;
+
+// ============================================================
+// PHASE MANAGEMENT
+// ============================================================
+function showPhase(id) {
+  document.querySelectorAll('.phase').forEach(p => p.classList.remove('active'));
+  const el = document.getElementById(id);
+  if (el) {
+    el.classList.add('active');
+    window.scrollTo(0, 0);
+  }
+}
+
+// ============================================================
+// INIT
+// ============================================================
+document.addEventListener('DOMContentLoaded', () => {
+  const trialUsed = localStorage.getItem('ascent_trial_used');
+  if (trialUsed) {
+    showPhase('phase-diagnosed');
+  } else {
+    showPhase('phase-upload');
+  }
+  initUpload();
+  initSpecForm();
+});
+
+// ============================================================
+// PHASE 1: VIDEO UPLOAD
+// ============================================================
+function initUpload() {
+  const area = document.getElementById('upload-area');
+  const input = document.getElementById('file-input');
+  const btn = document.getElementById('btn-upload');
+
+  area.addEventListener('click', () => input.click());
+
+  area.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    area.classList.add('dragover');
+  });
+  area.addEventListener('dragleave', () => {
+    area.classList.remove('dragover');
+  });
+  area.addEventListener('drop', (e) => {
+    e.preventDefault();
+    area.classList.remove('dragover');
+    if (e.dataTransfer.files.length > 0) {
+      handleFile(e.dataTransfer.files[0]);
+    }
+  });
+
+  input.addEventListener('change', () => {
+    if (input.files.length > 0) {
+      handleFile(input.files[0]);
+    }
+  });
+
+  btn.addEventListener('click', () => validateVideo());
+}
+
+function handleFile(file) {
+  if (!file.type.startsWith('video/')) {
+    showUploadError('動画ファイルを選択してください。');
+    return;
+  }
+  videoFile = file;
+  videoMimeType = file.type;
+
+  document.getElementById('file-name').textContent = file.name;
+  const preview = document.getElementById('video-preview');
+  preview.src = URL.createObjectURL(file);
+  preview.style.display = 'block';
+
+  document.getElementById('btn-upload').style.display = 'block';
+  document.getElementById('btn-upload').disabled = false;
+  hideUploadError();
+}
+
+function showUploadError(msg) {
+  const el = document.getElementById('upload-error');
+  el.textContent = msg;
+  el.style.display = 'block';
+}
+function hideUploadError() {
+  document.getElementById('upload-error').style.display = 'none';
+}
+
+async function validateVideo() {
+  const btn = document.getElementById('btn-upload');
+  btn.disabled = true;
+  document.getElementById('upload-spinner').style.display = 'block';
+  hideUploadError();
+
+  try {
+    videoBase64 = await fileToBase64(videoFile);
+
+    const body = {
+      contents: [{
+        parts: [
+          { inline_data: { mime_type: videoMimeType, data: videoBase64 } },
+          { text: VALIDATION_PROMPT }
+        ]
+      }]
+    };
+
+    const res = await fetch(GEMINI_ENDPOINT, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    });
+
+    if (!res.ok) throw new Error('API error');
+
+    const data = await res.json();
+    const answer = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim().toUpperCase() || '';
+
+    if (answer.includes('YES')) {
+      showPhase('phase-spec');
+    } else {
+      showUploadError('バスケットボールのシュート動画を送ってください。\n別の動画を選択して、もう一度お試しください。');
+      btn.disabled = false;
+    }
+  } catch (e) {
+    console.error(e);
+    showUploadError('ごめんなさい！🙇‍♂️現在、AIの分析サーバーが混み合っており、一時的にストップしました💦\n5〜10分ほど時間を置いてから、もう一度やり直してみてください！🙏');
+    btn.disabled = false;
+  } finally {
+    document.getElementById('upload-spinner').style.display = 'none';
+  }
+}
+
+function fileToBase64(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const base64 = reader.result.split(',')[1];
+      resolve(base64);
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+// ============================================================
+// PHASE 2: SPEC FORM
+// ============================================================
+function initSpecForm() {
+  document.getElementById('spec-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const specs = {
+      age: document.getElementById('spec-age').value,
+      height: document.getElementById('spec-height').value,
+      weight: document.getElementById('spec-weight').value,
+      gender: document.getElementById('spec-gender').value,
+      hand: document.getElementById('spec-hand').value,
+      sender: document.getElementById('spec-sender').value
+    };
+    await startDiagnosis(specs);
+  });
+}
+
+// ============================================================
+// PHASE 3: PROCESSING + DIAGNOSIS START
+// ============================================================
+async function startDiagnosis(specs) {
+  showPhase('phase-processing');
+  const processingText = document.getElementById('processing-text');
+  const processingError = document.getElementById('processing-error');
+  processingError.style.display = 'none';
+
+  processingText.textContent = `スペックの入力ありがとうございます！✨\n現在、AIがあなたのシュート動画とスペックを組み合わせて、超精密な分析を行っております🧠⚡️\n※AIが1フレームずつ解析するため、診断完了まで【1〜2分ほど】お時間がかかる場合がございます。\n分析が終わり次第、結果をお送りしますので、そのままお待ちください！🙇‍♂️☕️`;
+
+  const specText = `【選手スペック】\n年齢: ${specs.age}歳\n身長: ${specs.height}cm\n体重: ${specs.weight}kg\n性別: ${specs.gender}\n利き手: ${specs.hand}\n送信者: ${specs.sender}`;
+
+  conversationHistory = [
+    {
+      role: 'user',
+      parts: [
+        { inline_data: { mime_type: videoMimeType, data: videoBase64 } },
+        { text: specText + '\n\nこの動画とスペックをもとに、シュート診断を開始してください。まず1問目の5択質問をお願いします。' }
+      ]
+    }
+  ];
+
+  try {
+    const body = {
+      system_instruction: { parts: [{ text: SYSTEM_PROMPT }] },
+      contents: conversationHistory
+    };
+
+    const res = await fetch(GEMINI_ENDPOINT, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    });
+
+    if (!res.ok) throw new Error('API error');
+
+    const data = await res.json();
+    const responseText = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+
+    conversationHistory.push({
+      role: 'model',
+      parts: [{ text: responseText }]
+    });
+
+    questionCount = 1;
+    showQuestion(responseText);
+  } catch (e) {
+    console.error(e);
+    processingError.textContent = 'ごめんなさい！🙇‍♂️現在、AIの分析サーバーが混み合っており、一時的にストップしました💦\n5〜10分ほど時間を置いてから、もう一度やり直してみてください！🙏';
+    processingError.style.display = 'block';
+  }
+}
+
+// ============================================================
+// PHASE 4: QUESTIONS
+// ============================================================
+function showQuestion(text) {
+  showPhase('phase-question');
+  selectedChoice = null;
+
+  const questionText = document.getElementById('question-text');
+  const choicesContainer = document.getElementById('choices-container');
+  const btnAnswer = document.getElementById('btn-answer');
+  const questionError = document.getElementById('question-error');
+  questionError.style.display = 'none';
+
+  // Parse question text and choices
+  const lines = text.trim().split('\n');
+  const questionLines = [];
+  const choices = [];
+
+  for (const line of lines) {
+    const choiceMatch = line.match(/^\s*([1-5])\.\s*(.+)/);
+    if (choiceMatch) {
+      choices.push({ num: choiceMatch[1], text: choiceMatch[2].trim() });
+    } else {
+      if (choices.length === 0) {
+        questionLines.push(line);
+      }
+    }
+  }
+
+  questionText.textContent = questionLines.join('\n').trim();
+
+  choicesContainer.innerHTML = '';
+  if (choices.length > 0) {
+    choices.forEach(c => {
+      const btn = document.createElement('button');
+      btn.className = 'choice-btn';
+      btn.textContent = `${c.num}. ${c.text}`;
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.choice-btn').forEach(b => b.classList.remove('selected'));
+        btn.classList.add('selected');
+        selectedChoice = `${c.num}. ${c.text}`;
+        btnAnswer.style.display = 'block';
+      });
+      choicesContainer.appendChild(btn);
+    });
+  } else {
+    // If no choices parsed, it might be the final result
+    if (questionCount >= 3) {
+      showResult(text);
+      return;
+    }
+  }
+
+  btnAnswer.style.display = 'none';
+  btnAnswer.onclick = () => submitAnswer();
+}
+
+async function submitAnswer() {
+  if (!selectedChoice) return;
+
+  const btnAnswer = document.getElementById('btn-answer');
+  btnAnswer.disabled = true;
+  const questionError = document.getElementById('question-error');
+  questionError.style.display = 'none';
+
+  // Show processing
+  showPhase('phase-processing');
+  const processingText = document.getElementById('processing-text');
+  const processingError = document.getElementById('processing-error');
+  processingError.style.display = 'none';
+
+  processingText.textContent = `回答ありがとうございます！✨\n現在、AIがあなたの感覚をもとに、根本的なズレの原因を特定しています🧠⚡️\n※AIが複雑な分析を行うため、診断には【1〜2分ほど】お時間がかかります。`;
+
+  conversationHistory.push({
+    role: 'user',
+    parts: [{ text: selectedChoice }]
+  });
+
+  try {
+    // For subsequent requests, don't re-send the video inline_data
+    // Build contents without video for conversation turns after the first
+    const contentsForApi = conversationHistory.map((msg, idx) => {
+      if (idx === 0) {
+        // First message: include video
+        return msg;
+      }
+      return msg;
+    });
+
+    const body = {
+      system_instruction: { parts: [{ text: SYSTEM_PROMPT }] },
+      contents: contentsForApi
+    };
+
+    const res = await fetch(GEMINI_ENDPOINT, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    });
+
+    if (!res.ok) throw new Error('API error');
+
+    const data = await res.json();
+    const responseText = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+
+    conversationHistory.push({
+      role: 'model',
+      parts: [{ text: responseText }]
+    });
+
+    questionCount++;
+
+    if (questionCount > 3) {
+      showResult(responseText);
+    } else {
+      showQuestion(responseText);
+    }
+  } catch (e) {
+    console.error(e);
+    processingError.textContent = 'ごめんなさい！🙇‍♂️現在、AIの分析サーバーが混み合っており、一時的にストップしました💦\n5〜10分ほど時間を置いてから、もう一度やり直してみてください！🙏';
+    processingError.style.display = 'block';
+  } finally {
+    btnAnswer.disabled = false;
+  }
+}
+
+// ============================================================
+// PHASE 5: RESULT
+// ============================================================
+function showResult(text) {
+  showPhase('phase-result');
+  document.getElementById('result-content').textContent = text;
+
+  // Set trial used flag
+  localStorage.setItem('ascent_trial_used', 'true');
+
+  // Show bottom banner
+  document.getElementById('bottom-banner').classList.add('show');
+}
+</script>
+</body>
+</html>

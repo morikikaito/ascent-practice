@@ -3,10 +3,11 @@
    オフライン対応 + キャッシュ戦略
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
 
-const CACHE_NAME = 'ascent-practice-v1';
+const CACHE_NAME = 'ascent-practice-v2';
 const ASSETS_TO_CACHE = [
   '/',
   '/index.html',
+  '/trial.html',
   '/manifest.json',
   'https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Noto+Serif+JP:wght@300;400;500;700&display=swap'
 ];
