@@ -1034,6 +1034,12 @@ function handleFile(file) {
     showUploadError('動画ファイルを選択してください。');
     return;
   }
+  const maxMB = 80;
+  if (file.size > maxMB * 1024 * 1024) {
+    const sizeMB = Math.round(file.size / 1024 / 1024);
+    showUploadError('動画ファイルが大きすぎます（' + sizeMB + 'MB）。\n' + maxMB + 'MB以下の動画を使用してください。\niPhoneで撮影した動画を直接アップロードすると正常に動作します。');
+    return;
+  }
   videoFile = file;
   videoMimeType = file.type;
 
@@ -1080,7 +1086,12 @@ async function validateVideo() {
       body: JSON.stringify(body)
     });
 
-    if (!res.ok) throw new Error('API error');
+    if (!res.ok) {
+      const errData = await res.json().catch(() => ({}));
+      console.error('Gemini validation error:', res.status, errData);
+      if (res.status === 400) throw new Error('file_too_large');
+      throw new Error('API error ' + res.status);
+    }
 
     const data = await res.json();
     const answer = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim().toUpperCase() || '';
@@ -1093,7 +1104,10 @@ async function validateVideo() {
     }
   } catch (e) {
     console.error(e);
-    showUploadError('ごめんなさい！🙇‍♂️現在、AIの分析サーバーが混み合っており、一時的にストップしました💦\n5〜10分ほど時間を置いてから、もう一度やり直してみてください！🙏');
+    const msg = (e.message === 'file_too_large')
+      ? '動画ファイルが大きすぎます。\niPhoneで撮影した動画（MP4）を直接アップロードしてください。\nスクリーン録画や長時間動画は使用できません。'
+      : 'ごめんなさい！🙇‍♂️現在、AIの分析サーバーが混み合っており、一時的にストップしました💦\n5〜10分ほど時間を置いてから、もう一度やり直してみてください！🙏';
+    showUploadError(msg);
     btn.disabled = false;
   } finally {
     document.getElementById('upload-spinner').style.display = 'none';
