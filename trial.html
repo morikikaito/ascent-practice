@@ -11,7 +11,8 @@
 <title>ASCENT Practice | AI シュート診断</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Noto+Serif+JP:wght@300;400;500;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Noto+Serif+JP:wght@300;400;500;700&family=Cormorant+Garamond:wght@400;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.3/vision_bundle.js" crossorigin="anonymous"></script>
 <style>
 :root {
   --bg: #050507;
@@ -348,6 +349,29 @@ UNLEASHプランをご検討ください👇</div>
 </div>
 
 <!-- PHASE 1: Video Upload -->
+<div id="phase-mediapipe" class="phase">
+  <img src="images/kait.png" alt="ASCENT" style="width:100%;max-width:480px;display:block;margin:0 auto 24px;border-radius:8px;">
+  <div id="mp-loading-section" class="card">
+    <div style="text-align:center;padding:8px 0;">
+      <div style="font-family:Cinzel,serif;font-size:12px;letter-spacing:0.2em;color:var(--gold);margin-bottom:16px;">ASCENT SKELETON ANALYSIS</div>
+      <div id="mp-status" style="font-size:0.9rem;color:var(--text-muted);margin-bottom:20px;line-height:1.8;white-space:pre-wrap;">AIが骨格を解析しています...</div>
+      <div style="background:var(--bg-elevated);border-radius:100px;height:4px;overflow:hidden;">
+        <div id="mp-progress" style="height:100%;background:linear-gradient(90deg,var(--gold-dark),var(--gold));border-radius:100px;transition:width 0.6s ease;width:0%;"></div>
+      </div>
+    </div>
+  </div>
+  <div id="mp-results-section" style="display:none;">
+    <div class="card" style="margin-bottom:16px;">
+      <div style="font-family:Cinzel,serif;font-size:11px;letter-spacing:0.2em;color:var(--gold);margin-bottom:8px;">SKELETON ANALYSIS COMPLETE</div>
+      <div style="font-size:0.85rem;color:var(--text-muted);line-height:1.8;">骨格解析が完了しました。<span style="color:var(--gold);">黄色</span>の箇所が力の伝達が漏れているポイントです。</div>
+    </div>
+    <div id="mp-metrics"></div>
+    <div id="mp-frames"></div>
+    <button class="btn-gold" onclick="proceedToSpec()" style="margin-top:8px;">詳細診断に進む →</button>
+    <p style="text-align:center;font-size:0.8rem;color:var(--text-dim);margin-top:12px;">続けてAIが詳細な改善ポイントを診断します</p>
+  </div>
+</div>
+
 <div id="phase-upload" class="phase">
   <img src="images/kait.png" alt="ASCENT" style="width:240px;max-width:80%;margin:0 auto 32px;display:block;">
   <div class="card">
@@ -457,6 +481,250 @@ AIがシュートフォームの分析を開始しました。
 </div>
 
 <script>
+// ============================================================
+// MEDIAPIPE POSE ANALYSIS
+// ============================================================
+let poseLandmarker = null;
+let mediapipeResults = null;
+
+const MP_IDX = {
+  LEFT_SHOULDER:11, RIGHT_SHOULDER:12,
+  LEFT_ELBOW:13,    RIGHT_ELBOW:14,
+  LEFT_WRIST:15,    RIGHT_WRIST:16,
+  LEFT_HIP:23,      RIGHT_HIP:24,
+  LEFT_KNEE:25,     RIGHT_KNEE:26,
+  LEFT_ANKLE:27,    RIGHT_ANKLE:28
+};
+const MP_JOINT_LABELS = {
+  LEFT_SHOULDER:'肩（左）', RIGHT_SHOULDER:'肩（右）',
+  LEFT_ELBOW:'肘（左）',    RIGHT_ELBOW:'肘（右）',
+  LEFT_WRIST:'手首（左）',  RIGHT_WRIST:'手首（右）',
+  LEFT_HIP:'骨盤（左）',    RIGHT_HIP:'骨盤（右）',
+  LEFT_KNEE:'膝（左）',     RIGHT_KNEE:'膝（右）'
+};
+const MP_IDX_TO_NAME = Object.fromEntries(Object.entries(MP_IDX).map(([k,v]) => [v,k]));
+
+async function initMediaPipe() {
+  if (poseLandmarker) return poseLandmarker;
+  if (!window.PoseLandmarker || !window.FilesetResolver) return null;
+  try {
+    const vision = await window.FilesetResolver.forVisionTasks(
+      'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.3/wasm'
+    );
+    poseLandmarker = await window.PoseLandmarker.createFromOptions(vision, {
+      baseOptions: {
+        modelAssetPath: 'https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.task',
+        delegate: 'GPU'
+      },
+      runningMode: 'IMAGE',
+      numPoses: 1
+    });
+    return poseLandmarker;
+  } catch (e) {
+    console.error('MediaPipe init failed:', e);
+    return null;
+  }
+}
+
+function extractFrameAtTime(blob, ratio) {
+  return new Promise((resolve) => {
+    const video = document.createElement('video');
+    video.muted = true;
+    video.playsInline = true;
+    const url = URL.createObjectURL(blob);
+    video.src = url;
+    video.addEventListener('loadedmetadata', () => { video.currentTime = video.duration * ratio; });
+    video.addEventListener('seeked', () => {
+      const canvas = document.createElement('canvas');
+      canvas.width = video.videoWidth || 640;
+      canvas.height = video.videoHeight || 480;
+      canvas.getContext('2d').drawImage(video, 0, 0);
+      URL.revokeObjectURL(url);
+      resolve(canvas);
+    });
+    video.addEventListener('error', () => { URL.revokeObjectURL(url); resolve(null); });
+  });
+}
+
+function calcAngle(a, b, c) {
+  const v1 = { x: a.x - b.x, y: a.y - b.y };
+  const v2 = { x: c.x - b.x, y: c.y - b.y };
+  const dot = v1.x * v2.x + v1.y * v2.y;
+  const mag = Math.sqrt((v1.x*v1.x+v1.y*v1.y) * (v2.x*v2.x+v2.y*v2.y));
+  if (!mag) return 0;
+  return Math.round(Math.acos(Math.max(-1, Math.min(1, dot/mag))) * 180 / Math.PI);
+}
+
+function analyzeFrame(landmarks, phaseName) {
+  if (!landmarks || !landmarks.length) return { phase: phaseName, yellowJoints: [], landmarks: [] };
+  const lm = landmarks[0];
+  const hand = (currentSpecs?.hand === '左') ? 'LEFT' : 'RIGHT';
+  const opp = hand === 'RIGHT' ? 'LEFT' : 'RIGHT';
+  const SHOULDER = MP_IDX[hand + '_SHOULDER'];
+  const ELBOW    = MP_IDX[hand + '_ELBOW'];
+  const WRIST    = MP_IDX[hand + '_WRIST'];
+  const HIP      = MP_IDX[hand + '_HIP'];
+  const OPP_HIP  = MP_IDX[opp + '_HIP'];
+
+  const elbowAngle = (lm[SHOULDER] && lm[ELBOW] && lm[WRIST])
+    ? calcAngle(lm[SHOULDER], lm[ELBOW], lm[WRIST]) : null;
+  const hipDiff = (lm[HIP] && lm[OPP_HIP])
+    ? Math.round(Math.abs(lm[HIP].y - lm[OPP_HIP].y) * 100) : null;
+
+  const yellow = [];
+  if (phaseName === 'dip' && hipDiff !== null && hipDiff > 8) {
+    yellow.push(hand + '_HIP'); yellow.push(opp + '_HIP');
+  }
+  if (phaseName === 'setup' && elbowAngle !== null && (elbowAngle < 65 || elbowAngle > 115)) {
+    yellow.push(hand + '_ELBOW');
+  }
+  if (phaseName === 'release' && elbowAngle !== null && (elbowAngle < 135 || elbowAngle > 175)) {
+    yellow.push(hand + '_ELBOW');
+  }
+  if (phaseName === 'release' && lm[SHOULDER] && lm[WRIST]) {
+    const lift = lm[SHOULDER].y - lm[WRIST].y;
+    if (lift < 0.08) yellow.push(hand + '_WRIST');
+  }
+
+  return {
+    phase: phaseName,
+    elbowAngle,
+    hipDiff,
+    yellowJoints: [...new Set(yellow)],
+    landmarks: lm.map(l => ({ x: l.x, y: l.y, z: l.z, visibility: l.visibility }))
+  };
+}
+
+function renderYellowLight(srcCanvas, landmarks, yellowJoints) {
+  const out = document.createElement('canvas');
+  out.width = srcCanvas.width;
+  out.height = srcCanvas.height;
+  const ctx = out.getContext('2d');
+  ctx.drawImage(srcCanvas, 0, 0);
+  if (!landmarks || !landmarks.length) return out;
+  const lm = landmarks[0];
+  const W = out.width, H = out.height;
+  const connections = [
+    [11,12],[11,13],[13,15],[12,14],[14,16],
+    [11,23],[12,24],[23,24],[23,25],[24,26],[25,27],[26,28]
+  ];
+  const lw = Math.max(2, W * 0.004);
+  ctx.lineWidth = lw;
+  for (const [i,j] of connections) {
+    if (!lm[i] || !lm[j]) continue;
+    const yi = yellowJoints.includes(MP_IDX_TO_NAME[i]);
+    const yj = yellowJoints.includes(MP_IDX_TO_NAME[j]);
+    ctx.strokeStyle = (yi||yj) ? '#C9A84C' : 'rgba(245,240,232,0.55)';
+    ctx.beginPath();
+    ctx.moveTo(lm[i].x*W, lm[i].y*H);
+    ctx.lineTo(lm[j].x*W, lm[j].y*H);
+    ctx.stroke();
+  }
+  const r = Math.max(5, W * 0.012);
+  for (const idx of Object.values(MP_IDX)) {
+    const pt = lm[idx];
+    if (!pt) continue;
+    const name = MP_IDX_TO_NAME[idx];
+    const isYellow = yellowJoints.includes(name);
+    if (isYellow) {
+      ctx.fillStyle = 'rgba(201,168,76,0.25)';
+      ctx.beginPath();
+      ctx.arc(pt.x*W, pt.y*H, r*2.8, 0, 2*Math.PI);
+      ctx.fill();
+    }
+    ctx.fillStyle = isYellow ? '#C9A84C' : 'rgba(245,240,232,0.85)';
+    ctx.beginPath();
+    ctx.arc(pt.x*W, pt.y*H, r*(isYellow?1.6:1), 0, 2*Math.PI);
+    ctx.fill();
+  }
+  return out;
+}
+
+function displayMPResults(canvases, metrics) {
+  const phases = [
+    { canvas: canvases[0], m: metrics[0], label:'PHASE A — DIP',     sub:'ディップ（最下点）' },
+    { canvas: canvases[1], m: metrics[1], label:'PHASE B — SETUP',   sub:'セットアップ（構え）' },
+    { canvas: canvases[2], m: metrics[2], label:'PHASE C — RELEASE', sub:'リリース（フォロースルー）' }
+  ];
+  const framesEl = document.getElementById('mp-frames');
+  framesEl.innerHTML = '';
+  for (const p of phases) {
+    const hasY = p.m?.yellowJoints?.length > 0;
+    const el = document.createElement('div');
+    el.style.cssText = 'margin-bottom:14px;background:var(--bg-card);border:1px solid '+(hasY?'var(--gold)':'var(--border)')+';border-radius:12px;overflow:hidden;';
+    let html = '<div style="padding:10px 14px;font-family:Cinzel,serif;font-size:11px;letter-spacing:0.15em;color:'+(hasY?'var(--gold)':'var(--text-muted)')+';display:flex;justify-content:space-between;">'
+      +'<span>'+p.label+'</span><span style="font-size:10px;">'+p.sub+'</span></div>';
+    if (p.canvas) html += '<img src="'+p.canvas.toDataURL('image/jpeg',0.85)+'" style="width:100%;display:block;">';
+    if (hasY && p.m) {
+      const names = p.m.yellowJoints.map(j => MP_JOINT_LABELS[j]||j).join('・');
+      html += '<div style="padding:10px 14px;background:rgba(201,168,76,0.08);border-top:1px solid var(--border);font-size:11px;color:var(--gold);">⚠️ 要注意箇所：'+names+'</div>';
+    }
+    el.innerHTML = html;
+    framesEl.appendChild(el);
+  }
+  const releaseM = metrics[2];
+  const totalYellow = metrics.reduce((s, m) => s + (m?.yellowJoints?.length||0), 0);
+  document.getElementById('mp-metrics').innerHTML =
+    '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:16px;">'
+    +'<div style="background:var(--bg-card);border:1px solid var(--border);border-radius:8px;padding:12px;text-align:center;"><div style="font-family:\'Cormorant Garamond\',serif;font-size:24px;font-weight:700;color:var(--gold);">'+(releaseM?.elbowAngle ?? '--')+'°</div><div style="font-size:9px;color:var(--text-muted);margin-top:4px;">リリース角度</div></div>'
+    +'<div style="background:var(--bg-card);border:1px solid var(--border);border-radius:8px;padding:12px;text-align:center;"><div style="font-family:\'Cormorant Garamond\',serif;font-size:24px;font-weight:700;color:var(--gold);">'+(metrics[0]?.hipDiff ?? '--')+'</div><div style="font-size:9px;color:var(--text-muted);margin-top:4px;">骨盤スコア</div></div>'
+    +'<div style="background:var(--bg-card);border:1px solid var(--border);border-radius:8px;padding:12px;text-align:center;"><div style="font-family:\'Cormorant Garamond\',serif;font-size:24px;font-weight:700;color:var(--gold);">'+totalYellow+'</div><div style="font-size:9px;color:var(--text-muted);margin-top:4px;">黄色点灯数</div></div>'
+    +'</div>';
+  document.getElementById('mp-loading-section').style.display = 'none';
+  document.getElementById('mp-results-section').style.display = 'block';
+}
+
+async function runMediaPipeAnalysis() {
+  showPhase('phase-mediapipe');
+  const statusEl = document.getElementById('mp-status');
+  const progressEl = document.getElementById('mp-progress');
+  document.getElementById('mp-loading-section').style.display = 'block';
+  document.getElementById('mp-results-section').style.display = 'none';
+
+  try {
+    statusEl.textContent = 'MediaPipeを初期化しています...\nしばらくお待ちください';
+    progressEl.style.width = '15%';
+    const landmarker = await initMediaPipe();
+    if (!landmarker) { proceedToSpec(); return; }
+
+    progressEl.style.width = '35%';
+    statusEl.textContent = 'シュートの3つの決定的瞬間を抽出中...';
+    const frames = await Promise.all([
+      extractFrameAtTime(videoFile, 0.25),
+      extractFrameAtTime(videoFile, 0.60),
+      extractFrameAtTime(videoFile, 0.85)
+    ]);
+    progressEl.style.width = '60%';
+
+    statusEl.textContent = '関節の座標を計算しています...';
+    const results = frames.map(f => f ? landmarker.detect(f) : { landmarks: [] });
+    progressEl.style.width = '80%';
+
+    const metrics = [
+      analyzeFrame(results[0].landmarks, 'dip'),
+      analyzeFrame(results[1].landmarks, 'setup'),
+      analyzeFrame(results[2].landmarks, 'release')
+    ];
+    mediapipeResults = { dip: metrics[0], setup: metrics[1], release: metrics[2] };
+
+    statusEl.textContent = 'Yellow Lightを生成しています...';
+    const overlays = frames.map((f, i) =>
+      f ? renderYellowLight(f, results[i].landmarks, metrics[i].yellowJoints) : null
+    );
+    progressEl.style.width = '100%';
+
+    displayMPResults(overlays, metrics);
+  } catch (e) {
+    console.error('MediaPipe error:', e);
+    proceedToSpec();
+  }
+}
+
+function proceedToSpec() {
+  saveState('spec');
+  showPhase('phase-spec');
+}
+
 // ============================================================
 // CONFIG
 // ============================================================
@@ -818,8 +1086,7 @@ async function validateVideo() {
     const answer = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim().toUpperCase() || '';
 
     if (answer.includes('YES')) {
-      saveState('spec');
-      showPhase('phase-spec');
+      runMediaPipeAnalysis();
     } else {
       showUploadError('バスケットボールのシュート動画を送ってください。\n別の動画を選択して、もう一度お試しください。');
       btn.disabled = false;
@@ -1187,7 +1454,13 @@ async function saveToAirtable(finalDiagnosisText) {
         'fldthaxMIyG1bS6gx': historyJson,
         'fld4BYepPDaArrvYp': answersText,
         'fldj3EWDv3k8bvrd7': finalDiagnosisText,
-        'fld30k5IyhncbtbNW': userTier === 'vip'
+        'fld30k5IyhncbtbNW': userTier === 'vip',
+        'mediapipe_dip':     mediapipeResults?.dip    ? JSON.stringify(mediapipeResults.dip)    : '',
+        'mediapipe_setup':   mediapipeResults?.setup  ? JSON.stringify(mediapipeResults.setup)  : '',
+        'mediapipe_release': mediapipeResults?.release? JSON.stringify(mediapipeResults.release): '',
+        'yellow_light_joints': mediapipeResults
+          ? [...(mediapipeResults.dip?.yellowJoints||[]), ...(mediapipeResults.setup?.yellowJoints||[]), ...(mediapipeResults.release?.yellowJoints||[])].join(', ')
+          : ''
       }
     }]
   };
