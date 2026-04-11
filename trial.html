@@ -1105,7 +1105,7 @@ async function validateVideo() {
   } catch (e) {
     console.error(e);
     const msg = (e.message === 'file_too_large')
-      ? '動画ファイルが大きすぎます。\niPhoneで撮影した動画（MP4）を直接アップロードしてください。\nスクリーン録画や長時間動画は使用できません。'
+      ? '動画のサイズを確認してください'
       : 'ごめんなさい！🙇‍♂️現在、AIの分析サーバーが混み合っており、一時的にストップしました💦\n5〜10分ほど時間を置いてから、もう一度やり直してみてください！🙏';
     showUploadError(msg);
     btn.disabled = false;
