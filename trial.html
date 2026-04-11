@@ -1187,18 +1187,8 @@ async function startDiagnosis(specs) {
     if (mp.release) mpDataText += `\nRELEASE（リリース）: 肘角度=${mp.release.elbowAngle ?? '--'}° / 骨盤差=${mp.release.hipDiff ?? '--'} / 要注意=${mp.release.yellowJoints.join(',')||'なし'}`;
   }
 
-  const userContent = [];
-  const labels = ['DIP（最下点）', 'SETUP（構え）', 'RELEASE（リリース）'];
-  for (let i = 0; i < 3; i++) {
-    if (frameImages[i]) {
-      userContent.push({ type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: frameImages[i] } });
-      userContent.push({ type: 'text', text: '↑ ' + labels[i] });
-    }
-  }
-  userContent.push({ type: 'text', text: specText + mpDataText + '\n\nこの画像・スペック・骨格データをもとに、シュート診断を開始してください。まず1問目の5択質問をお願いします。' });
-
   conversationHistory = [
-    { role: 'user', content: userContent }
+    { role: 'user', content: specText + mpDataText + '\n\nこのスペックと骨格解析データをもとに、シュート診断を開始してください。まず1問目の5択質問をお願いします。' }
   ];
 
   try {
