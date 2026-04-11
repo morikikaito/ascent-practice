@@ -20,9 +20,12 @@
 |------|------|
 | 会社名 | Step By Step ASCENT |
 | サービス | バスケシュート改善AI診断SaaS（中高生・保護者向け） |
-| LP | https://stepbystep-ascent.com |
+| LP（メイン） | https://stepbystep-ascent.com |
+| LP（購買） | https://stepbystep-ascent.com/buy |
 | Practice | https://practice.stepbystep-ascent.com |
 | Trial | https://practice.stepbystep-ascent.com/trial |
+| Analytics | https://stepbystep-ascent.com/analytics |
+| 受講規約 | https://stepbystep-ascent.com/terms/ |
 | LINE | https://lin.ee/WGWUFeW（登録者527名） |
 | メール | moriki.beaters@gmail.com |
 | ブランドタグライン | "No Limits 非日常を当たり前に" |
@@ -30,22 +33,33 @@
 
 ---
 
-## 03 AI体制
+## 03 AI体制（v5 マルチエンジン）
 
 【オーナー】Kait Moriki
 - 役割：最終決裁・GO/NO GO判断のみ
 - 実務：撮影・対面クリニック・PRO個別フィードバックのみ
 
-【AI CEO】Claude Code（Cursor統合）
-- 役割：実務統括・全ファイル操作・戦略実行
-- スキルファイル参照：
-  - management_SKILL.md（経営判断）
-  - SKILL.md（シュート診断）
-  - shoot_diagnosis_SKILL.md（診断仕様）
-  - marketing_SKILL.md（SNS・LINE・LP）※作成予定
-  - sales_SKILL.md（Stripe・転換設計）※作成予定
+【Cursor】AI CEO — Claude Code
+- 役割：実務統括・全ファイル操作・戦略実行・コード実装
+
+【LINE AIチーム】ascent-agent.moriki-beaters.workers.dev
+- 👔 CEO — Claude Sonnet（統括・最終判断）
+- 📣 CMO — Claude Sonnet（マーケ・LP・LINE配信）
+- ⚙️ CTO — Gemini 2.5 Pro（技術・システム・設計）
+- 🔍 CPO — Tavily Web検索 → Claude（市場調査・リアルタイム情報）
+- 📊 CDO — Analytics API → Claude（データ分析・KPI）
+
+エスカレーション：部下→CEO→Kait
+記録：Airtable永久保存（AI作業記録テーブル）
 
 意思決定フロー：AI CEOが実行 → Kaitが承認
+
+スキルファイル参照：
+- management_SKILL.md（経営判断）
+- SKILL.md（LPデザイン仕様）
+- shoot_diagnosis_SKILL.md（診断仕様）
+- marketing_SKILL.md（SNS・LINE・LP）
+- ~/.cursor/skills/line-ai-agent/SKILL.md（LINEエージェント仕様）
 
 ---
 
@@ -63,9 +77,12 @@
 
 | 項目 | 内容 |
 |------|------|
-| リポジトリ | ~/ascent-practice |
-| デプロイ | GitHub Pages → practice.stepbystep-ascent.com |
-| LP | Netlify（ascent-lp） |
+| リポジトリ（Practice） | ~/ascent-practice → GitHub Pages |
+| リポジトリ（LP） | ~/ascent-lp → Netlify |
+| リポジトリ（Agent） | ~/ascent-agent → Cloudflare Workers |
+| リポジトリ（Analytics） | ~/ascent-analytics → Cloudflare Workers |
+| Agent Worker | https://ascent-agent.moriki-beaters.workers.dev |
+| Analytics Worker | https://ascent-analytics.moriki-beaters.workers.dev |
 | 決済 | Stripe |
 | 自動化 | Make + Lステップ |
 | GA4 | G-YDTC8ECY4R |
@@ -116,9 +133,12 @@ CTAボタン：動詞始まり「今すぐ無料で〜する」
 
 ## 12 スキルファイル参照
 
-- 経営会議の実行方法 → ~/ascent-lp/management_SKILL.md を参照
-- シュート診断スキル → ~/ascent-lp/SKILL.md を参照
-- 診断システム仕様 → ~/ascent-lp/shoot_diagnosis_SKILL.md を参照
+- LPデザイン仕様 → ~/ascent-lp/SKILL.md
+- 経営会議の実行方法 → ~/ascent-lp/management_SKILL.md
+- 診断システム仕様 → ~/ascent-lp/shoot_diagnosis_SKILL.md
+- マーケティング → ~/ascent-lp/marketing_SKILL.md
+- LINEエージェント → ~/.cursor/skills/line-ai-agent/SKILL.md
+- LINEエージェント実装参照 → ~/.cursor/skills/line-ai-agent/reference.md
 
 ---
 
