@@ -1524,23 +1524,23 @@ async function saveToAirtable(finalDiagnosisText) {
   };
 
   // Table 2: 診断データ
+  const mpSummary = mediapipeResults ? [
+    mediapipeResults.dip ? 'DIP: elbow=' + (mediapipeResults.dip.elbowAngle||'--') + '° hip=' + (mediapipeResults.dip.hipDiff||'--') + ' yellow=' + (mediapipeResults.dip.yellowJoints||[]).join(',') : '',
+    mediapipeResults.setup ? 'SETUP: elbow=' + (mediapipeResults.setup.elbowAngle||'--') + '° hip=' + (mediapipeResults.setup.hipDiff||'--') + ' yellow=' + (mediapipeResults.setup.yellowJoints||[]).join(',') : '',
+    mediapipeResults.release ? 'RELEASE: elbow=' + (mediapipeResults.release.elbowAngle||'--') + '° hip=' + (mediapipeResults.release.hipDiff||'--') + ' yellow=' + (mediapipeResults.release.yellowJoints||[]).join(',') : ''
+  ].filter(s => s).join('\n') : '';
+
   const diagnosisRecord = {
     records: [{
       fields: {
-        'fldA8jKroau7sPZyw': specsJson,
+        'fldA8jKroau7sPZyw': specsJson + (mpSummary ? '\n\n【MediaPipe】\n' + mpSummary : ''),
         'fldOuSlI4A0XfgLxT': handText,
         'fld6o41AtG3sRs0aL': validationResult,
         'fldsEdzhF214j5DjU': 3,
         'fldthaxMIyG1bS6gx': historyJson,
         'fld4BYepPDaArrvYp': answersText,
         'fldj3EWDv3k8bvrd7': finalDiagnosisText,
-        'fld30k5IyhncbtbNW': userTier === 'vip',
-        'mediapipe_dip':     mediapipeResults?.dip    ? JSON.stringify(mediapipeResults.dip)    : '',
-        'mediapipe_setup':   mediapipeResults?.setup  ? JSON.stringify(mediapipeResults.setup)  : '',
-        'mediapipe_release': mediapipeResults?.release? JSON.stringify(mediapipeResults.release): '',
-        'yellow_light_joints': mediapipeResults
-          ? [...(mediapipeResults.dip?.yellowJoints||[]), ...(mediapipeResults.setup?.yellowJoints||[]), ...(mediapipeResults.release?.yellowJoints||[])].join(', ')
-          : ''
+        'fld30k5IyhncbtbNW': userTier === 'vip'
       }
     }]
   };
