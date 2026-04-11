@@ -776,7 +776,7 @@ function proceedToSpec() {
 // CONFIG
 // ============================================================
 const GEMINI_API_KEY = 'AIzaSyAKDwUwuEURRqxzI1jBvfMA1Tbk34TCsGk';
-const GEMINI_DIAGNOSE_ENDPOINT = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`;
+const DIAGNOSE_ENDPOINT = 'https://ascent-agent.moriki-beaters.workers.dev/diagnose';
 const UNLEASH_URL = 'https://buy.stripe.com/28EcN47bXbeA8G4bMHf7i0B';
 
 // Airtable
@@ -1187,34 +1187,27 @@ async function startDiagnosis(specs) {
   }
 
   conversationHistory = [
-    {
-      role: 'user',
-      parts: [{ text: specText + mpDataText + '\n\nこのスペックと骨格解析データをもとに、シュート診断を開始してください。まず1問目の5択質問をお願いします。' }]
-    }
+    { role: 'user', content: specText + mpDataText + '\n\nこのスペックと骨格解析データをもとに、シュート診断を開始してください。まず1問目の5択質問をお願いします。' }
   ];
 
   try {
-    const body = {
-      system_instruction: { parts: [{ text: SYSTEM_PROMPT }] },
-      contents: conversationHistory
-    };
-
-    const res = await fetch(GEMINI_DIAGNOSE_ENDPOINT, {
+    const res = await fetch(DIAGNOSE_ENDPOINT, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body)
+      body: JSON.stringify({ system: SYSTEM_PROMPT, messages: conversationHistory })
     });
 
     if (!res.ok) {
-      const errData = await res.json().catch(() => ({}));
-      throw new Error('API error ' + res.status + ': ' + JSON.stringify(errData).substring(0, 200));
+      const errText = await res.text();
+      throw new Error('API error ' + res.status + ': ' + errText.substring(0, 200));
     }
 
     const data = await res.json();
-    const responseText = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+    if (data.error) throw new Error(data.error);
+    const responseText = data.text;
     if (!responseText) throw new Error('Empty response from AI');
 
-    conversationHistory.push({ role: 'model', parts: [{ text: responseText }] });
+    conversationHistory.push({ role: 'assistant', content: responseText });
 
     questionCount = 1;
     lastQuestionText = responseText;
@@ -1302,29 +1295,25 @@ async function submitAnswer() {
 
   userAnswers.push(selectedChoice);
 
-  conversationHistory.push({ role: 'user', parts: [{ text: selectedChoice }] });
+  conversationHistory.push({ role: 'user', content: selectedChoice });
 
   try {
-    const body = {
-      system_instruction: { parts: [{ text: SYSTEM_PROMPT }] },
-      contents: conversationHistory
-    };
-
-    const res = await fetch(GEMINI_DIAGNOSE_ENDPOINT, {
+    const res = await fetch(DIAGNOSE_ENDPOINT, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body)
+      body: JSON.stringify({ system: SYSTEM_PROMPT, messages: conversationHistory })
     });
 
     if (!res.ok) {
-      const errData = await res.json().catch(() => ({}));
-      throw new Error('API error ' + res.status + ': ' + JSON.stringify(errData).substring(0, 200));
+      const errText = await res.text();
+      throw new Error('API error ' + res.status + ': ' + errText.substring(0, 200));
     }
 
     const data = await res.json();
-    const responseText = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+    if (data.error) throw new Error(data.error);
+    const responseText = data.text;
 
-    conversationHistory.push({ role: 'model', parts: [{ text: responseText }] });
+    conversationHistory.push({ role: 'assistant', content: responseText });
 
     questionCount++;
 
@@ -1425,7 +1414,7 @@ async function saveToAirtable(finalDiagnosisText) {
 
   const historyForSave = conversationHistory.map(msg => ({
     role: msg.role,
-    parts: msg.parts.map(p => p.text ? { text: p.text } : { type: 'data' })
+    content: typeof msg.content === 'string' ? msg.content : String(msg.content || '')
   }));
   const historyJson = JSON.stringify(historyForSave);
 
@@ -1440,8 +1429,8 @@ async function saveToAirtable(finalDiagnosisText) {
   const handText = currentSpecs ? (currentSpecs.hand === '右' ? '右手' : '左手') : '';
   const answersText = userAnswers.join('\n');
 
-  const firstModelResponse = conversationHistory.find(m => m.role === 'model');
-  const validationResult = firstModelResponse ? firstModelResponse.parts[0]?.text?.substring(0, 500) || '' : '';
+  const firstModelResponse = conversationHistory.find(m => m.role === 'assistant');
+  const validationResult = firstModelResponse ? (typeof firstModelResponse.content === 'string' ? firstModelResponse.content.substring(0, 500) : '') : '';
 
   const headers = {
     'Authorization': `Bearer ${AIRTABLE_API_KEY}`,
