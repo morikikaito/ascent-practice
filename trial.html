@@ -1037,7 +1037,7 @@ function handleFile(file) {
   const maxMB = 80;
   if (file.size > maxMB * 1024 * 1024) {
     const sizeMB = Math.round(file.size / 1024 / 1024);
-    showUploadError('動画ファイルが大きすぎます（' + sizeMB + 'MB）。\n' + maxMB + 'MB以下の動画を使用してください。\niPhoneで撮影した動画を直接アップロードすると正常に動作します。');
+    showUploadError('動画のサイズを確認してください');
     return;
   }
   videoFile = file;
@@ -1099,7 +1099,7 @@ async function validateVideo() {
     if (answer.includes('YES')) {
       runMediaPipeAnalysis();
     } else {
-      showUploadError('バスケットボールのシュート動画を送ってください。\n別の動画を選択して、もう一度お試しください。');
+      showUploadError('動画のサイズを確認してください');
       btn.disabled = false;
     }
   } catch (e) {
