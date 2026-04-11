@@ -1120,49 +1120,11 @@ async function validateVideo() {
   hideUploadError();
 
   try {
-    const validationFrame = await extractFrameAtTime(videoFile, 0.5);
-    if (!validationFrame) {
-      showUploadError('動画を読み込めませんでした。\n別の動画で試してみてください📱');
-      btn.disabled = false;
-      return;
-    }
-    const frameDataUrl = validationFrame.toDataURL('image/jpeg', 0.8);
-    const frameBase64 = frameDataUrl.split(',')[1];
-
-    const body = {
-      contents: [{
-        parts: [
-          { inline_data: { mime_type: 'image/jpeg', data: frameBase64 } },
-          { text: VALIDATION_PROMPT }
-        ]
-      }]
-    };
-
-    const res = await fetch(GEMINI_ENDPOINT, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body)
-    });
-
-    if (!res.ok) {
-      const errData = await res.json().catch(() => ({}));
-      console.error('Gemini validation error:', res.status, errData);
-      throw new Error('API error ' + res.status);
-    }
-
-    const data = await res.json();
-    const answer = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim().toUpperCase() || '';
-
-    if (answer.includes('YES')) {
-      videoBase64 = await fileToBase64(videoFile);
-      runMediaPipeAnalysis();
-    } else {
-      showUploadError('バスケットボールのシュート動画を撮影してアップロードしてください🏀\nリングが映っていなくても、シュートフォームが映っていればOKです！');
-      btn.disabled = false;
-    }
+    videoBase64 = await fileToBase64(videoFile);
+    runMediaPipeAnalysis();
   } catch (e) {
     console.error(e);
-    showUploadError('ごめんなさい！🙇‍♂️現在、AIの分析サーバーが混み合っており、一時的にストップしました💦\n5〜10分ほど時間を置いてから、もう一度やり直してみてください！🙏');
+    showUploadError('動画の読み込みに失敗しました。\n別の動画で試してみてください📱');
     btn.disabled = false;
   } finally {
     document.getElementById('upload-spinner').style.display = 'none';
