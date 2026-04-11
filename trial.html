@@ -1198,10 +1198,10 @@ async function startDiagnosis(specs) {
       body: JSON.stringify({ system: SYSTEM_PROMPT, messages: conversationHistory })
     });
 
-    if (!res.ok) throw new Error('API error ' + res.status);
-
-    const data = await res.json();
-    if (data.error) throw new Error(data.error);
+    const resText = await res.text();
+    let data;
+    try { data = JSON.parse(resText); } catch (pe) { throw new Error('Parse error: ' + resText.substring(0, 200)); }
+    if (!res.ok || data.error) throw new Error(data.error || 'API error ' + res.status);
     const responseText = data.text;
 
     conversationHistory.push({ role: 'assistant', content: responseText });
@@ -1211,8 +1211,8 @@ async function startDiagnosis(specs) {
     saveState('question');
     showQuestion(responseText);
   } catch (e) {
-    console.error(e);
-    processingError.textContent = 'ごめんなさい！🙇‍♂️現在、AIの分析サーバーが混み合っており、一時的にストップしました💦\n5〜10分ほど時間を置いてから、もう一度やり直してみてください！🙏';
+    console.error('Diagnosis error:', e);
+    processingError.textContent = 'エラー詳細: ' + e.message + '\n\n5〜10分ほど時間を置いてから、もう一度やり直してみてください🙏';
     processingError.style.display = 'block';
   }
 }
