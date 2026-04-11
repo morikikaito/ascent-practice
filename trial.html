@@ -758,6 +758,8 @@ async function runMediaPipeAnalysis() {
     );
     progressEl.style.width = '100%';
 
+    frameImages = frames.map(f => f ? f.toDataURL('image/jpeg', 0.7).split(',')[1] : null);
+
     displayMPResults(overlays, metrics);
   } catch (e) {
     console.error('MediaPipe error:', e);
@@ -775,6 +777,7 @@ function proceedToSpec() {
 // ============================================================
 const GEMINI_API_KEY = 'AIzaSyAKDwUwuEURRqxzI1jBvfMA1Tbk34TCsGk';
 const GEMINI_ENDPOINT = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`;
+const DIAGNOSE_ENDPOINT = 'https://ascent-agent.moriki-beaters.workers.dev/diagnose';
 const UNLEASH_URL = 'https://buy.stripe.com/28EcN47bXbeA8G4bMHf7i0B';
 
 // Airtable
@@ -891,6 +894,7 @@ let questionCount = 0;
 let selectedChoice = null;
 let currentSpecs = null;
 let lastQuestionText = null;
+let frameImages = [];
 
 // UID & user tier
 let lineUid = 'anonymous';
@@ -907,7 +911,8 @@ function saveState(phase) {
     conversationHistory: conversationHistory,
     videoBase64: videoBase64,
     videoMimeType: videoMimeType,
-    lastQuestionText: lastQuestionText
+    lastQuestionText: lastQuestionText,
+    frameImages: frameImages
   };
   try {
     localStorage.setItem('ascent_trial_state', JSON.stringify(state));
@@ -1015,6 +1020,7 @@ function resumeFromState(state) {
   questionCount = state.questionCount || 0;
   currentSpecs = state.specs || null;
   lastQuestionText = state.lastQuestionText || null;
+  frameImages = state.frameImages || [];
 
   const phase = state.phase;
 
@@ -1210,37 +1216,43 @@ async function startDiagnosis(specs) {
 
   const specText = `【選手スペック】\n年齢: ${specs.age}歳\n身長: ${specs.height}cm\n体重: ${specs.weight}kg\n性別: ${specs.gender}\n利き手: ${specs.hand}\n送信者: ${specs.sender}`;
 
-  conversationHistory = [
-    {
-      role: 'user',
-      parts: [
-        { inline_data: { mime_type: videoMimeType, data: videoBase64 } },
-        { text: specText + '\n\nこの動画とスペックをもとに、シュート診断を開始してください。まず1問目の5択質問をお願いします。' }
-      ]
+  let mpDataText = '';
+  if (mediapipeResults) {
+    const mp = mediapipeResults;
+    mpDataText = '\n\n【MediaPipe骨格解析データ】';
+    if (mp.dip) mpDataText += `\nDIP（最下点）: 肘角度=${mp.dip.elbowAngle ?? '--'}° / 骨盤差=${mp.dip.hipDiff ?? '--'} / 要注意=${mp.dip.yellowJoints.join(',')||'なし'}`;
+    if (mp.setup) mpDataText += `\nSETUP（構え）: 肘角度=${mp.setup.elbowAngle ?? '--'}° / 骨盤差=${mp.setup.hipDiff ?? '--'} / 要注意=${mp.setup.yellowJoints.join(',')||'なし'}`;
+    if (mp.release) mpDataText += `\nRELEASE（リリース）: 肘角度=${mp.release.elbowAngle ?? '--'}° / 骨盤差=${mp.release.hipDiff ?? '--'} / 要注意=${mp.release.yellowJoints.join(',')||'なし'}`;
+  }
+
+  const userContent = [];
+  const labels = ['DIP（最下点）', 'SETUP（構え）', 'RELEASE（リリース）'];
+  for (let i = 0; i < 3; i++) {
+    if (frameImages[i]) {
+      userContent.push({ type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: frameImages[i] } });
+      userContent.push({ type: 'text', text: '↑ ' + labels[i] });
     }
+  }
+  userContent.push({ type: 'text', text: specText + mpDataText + '\n\nこの画像・スペック・骨格データをもとに、シュート診断を開始してください。まず1問目の5択質問をお願いします。' });
+
+  conversationHistory = [
+    { role: 'user', content: userContent }
   ];
 
   try {
-    const body = {
-      system_instruction: { parts: [{ text: SYSTEM_PROMPT }] },
-      contents: conversationHistory
-    };
-
-    const res = await fetch(GEMINI_ENDPOINT, {
+    const res = await fetch(DIAGNOSE_ENDPOINT, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body)
+      body: JSON.stringify({ system: SYSTEM_PROMPT, messages: conversationHistory })
     });
 
-    if (!res.ok) throw new Error('API error');
+    if (!res.ok) throw new Error('API error ' + res.status);
 
     const data = await res.json();
-    const responseText = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+    if (data.error) throw new Error(data.error);
+    const responseText = data.text;
 
-    conversationHistory.push({
-      role: 'model',
-      parts: [{ text: responseText }]
-    });
+    conversationHistory.push({ role: 'assistant', content: responseText });
 
     questionCount = 1;
     lastQuestionText = responseText;
@@ -1328,42 +1340,27 @@ async function submitAnswer() {
 
   userAnswers.push(selectedChoice);
 
-  conversationHistory.push({
-    role: 'user',
-    parts: [{ text: selectedChoice }]
-  });
+  conversationHistory.push({ role: 'user', content: selectedChoice });
 
   try {
-    // For subsequent requests, don't re-send the video inline_data
-    // Build contents without video for conversation turns after the first
-    const contentsForApi = conversationHistory.map((msg, idx) => {
-      if (idx === 0) {
-        // First message: include video
-        return msg;
-      }
-      return msg;
+    const messagesForApi = conversationHistory.map((msg, idx) => {
+      if (idx === 0) return msg;
+      return { role: msg.role, content: typeof msg.content === 'string' ? msg.content : msg.content };
     });
 
-    const body = {
-      system_instruction: { parts: [{ text: SYSTEM_PROMPT }] },
-      contents: contentsForApi
-    };
-
-    const res = await fetch(GEMINI_ENDPOINT, {
+    const res = await fetch(DIAGNOSE_ENDPOINT, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body)
+      body: JSON.stringify({ system: SYSTEM_PROMPT, messages: messagesForApi })
     });
 
-    if (!res.ok) throw new Error('API error');
+    if (!res.ok) throw new Error('API error ' + res.status);
 
     const data = await res.json();
-    const responseText = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+    if (data.error) throw new Error(data.error);
+    const responseText = data.text;
 
-    conversationHistory.push({
-      role: 'model',
-      parts: [{ text: responseText }]
-    });
+    conversationHistory.push({ role: 'assistant', content: responseText });
 
     questionCount++;
 
@@ -1462,11 +1459,13 @@ function escapeHtml(str) {
 async function saveToAirtable(finalDiagnosisText) {
   const now = new Date().toISOString();
 
-  // Build conversation history without video base64 (too large)
-  const historyForSave = conversationHistory.map(msg => ({
-    role: msg.role,
-    parts: msg.parts.map(p => p.text ? { text: p.text } : { type: 'video' })
-  }));
+  const historyForSave = conversationHistory.map(msg => {
+    if (typeof msg.content === 'string') return { role: msg.role, content: msg.content };
+    if (Array.isArray(msg.content)) {
+      return { role: msg.role, content: msg.content.filter(c => c.type === 'text').map(c => c.text).join('\n') };
+    }
+    return { role: msg.role, content: String(msg.content || '') };
+  });
   const historyJson = JSON.stringify(historyForSave);
 
   const specsJson = currentSpecs ? JSON.stringify({
@@ -1480,9 +1479,8 @@ async function saveToAirtable(finalDiagnosisText) {
   const handText = currentSpecs ? (currentSpecs.hand === '右' ? '右手' : '左手') : '';
   const answersText = userAnswers.join('\n');
 
-  // Get first model response as validation result
-  const firstModelResponse = conversationHistory.find(m => m.role === 'model');
-  const validationResult = firstModelResponse ? firstModelResponse.parts[0]?.text?.substring(0, 500) || '' : '';
+  const firstModelResponse = conversationHistory.find(m => m.role === 'assistant');
+  const validationResult = firstModelResponse ? (typeof firstModelResponse.content === 'string' ? firstModelResponse.content.substring(0, 500) : '') : '';
 
   const headers = {
     'Authorization': `Bearer ${AIRTABLE_API_KEY}`,
