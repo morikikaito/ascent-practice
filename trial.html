@@ -457,6 +457,9 @@ AIがシュートフォームの分析を開始しました。
   <div class="card">
     <div id="question-text" style="line-height:1.9;font-size:0.93rem;margin-bottom:20px;white-space:pre-wrap;"></div>
     <div id="choices-container"></div>
+    <div id="custom-input-wrapper" style="display:none;margin-top:12px;">
+      <textarea id="custom-input" placeholder="あなたの感覚を自由に入力してください..." style="width:100%;min-height:80px;padding:12px;border:1px solid rgba(201,168,76,0.3);border-radius:8px;background:rgba(255,255,255,0.05);color:#F5F0E8;font-family:'Noto Serif JP',serif;font-size:0.9rem;resize:vertical;"></textarea>
+    </div>
     <button id="btn-answer" class="btn-gold" style="margin-top:12px;display:none;">回答を送信する</button>
   </div>
   <div id="question-error" class="error-msg" style="display:none"></div>
@@ -1272,21 +1275,34 @@ function showQuestion(text) {
   questionText.textContent = questionLines.join('\n').trim();
 
   choicesContainer.innerHTML = '';
+  const customWrapper = document.getElementById('custom-input-wrapper');
+  const customInput = document.getElementById('custom-input');
+  customWrapper.style.display = 'none';
+  customInput.value = '';
+
   if (choices.length > 0) {
     choices.forEach(c => {
       const btn = document.createElement('button');
       btn.className = 'choice-btn';
       btn.textContent = `${c.num}. ${c.text}`;
+      const isCustomChoice = c.num === '4';
       btn.addEventListener('click', () => {
         document.querySelectorAll('.choice-btn').forEach(b => b.classList.remove('selected'));
         btn.classList.add('selected');
-        selectedChoice = `${c.num}. ${c.text}`;
-        btnAnswer.style.display = 'block';
+        if (isCustomChoice) {
+          customWrapper.style.display = 'block';
+          customInput.focus();
+          selectedChoice = null;
+          btnAnswer.style.display = 'block';
+        } else {
+          customWrapper.style.display = 'none';
+          selectedChoice = `${c.num}. ${c.text}`;
+          btnAnswer.style.display = 'block';
+        }
       });
       choicesContainer.appendChild(btn);
     });
   } else {
-    // If no choices parsed, it might be the final result
     if (questionCount >= 3) {
       showResult(text);
       return;
@@ -1298,7 +1314,19 @@ function showQuestion(text) {
 }
 
 async function submitAnswer() {
-  if (!selectedChoice) return;
+  const customInput = document.getElementById('custom-input');
+  const customWrapper = document.getElementById('custom-input-wrapper');
+  if (customWrapper.style.display !== 'none' && customInput.value.trim()) {
+    selectedChoice = '4. ' + customInput.value.trim();
+  }
+  if (!selectedChoice) {
+    if (customWrapper.style.display !== 'none' && !customInput.value.trim()) {
+      customInput.style.borderColor = '#C9A84C';
+      customInput.setAttribute('placeholder', '感覚を入力してから送信してください...');
+      return;
+    }
+    return;
+  }
 
   const btnAnswer = document.getElementById('btn-answer');
   btnAnswer.disabled = true;
