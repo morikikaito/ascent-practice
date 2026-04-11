@@ -521,28 +521,61 @@ async function initMediaPipe() {
     });
     return poseLandmarker;
   } catch (e) {
-    console.error('MediaPipe init failed:', e);
-    return null;
+    console.warn('GPU delegate failed, falling back to CPU:', e);
+    try {
+      poseLandmarker = await window.PoseLandmarker.createFromOptions(vision, {
+        baseOptions: {
+          modelAssetPath: 'https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.task',
+          delegate: 'CPU'
+        },
+        runningMode: 'IMAGE',
+        numPoses: 1
+      });
+      return poseLandmarker;
+    } catch (e2) {
+      console.error('MediaPipe init failed:', e2);
+      return null;
+    }
   }
 }
 
 function extractFrameAtTime(blob, ratio) {
   return new Promise((resolve) => {
+    const timeout = setTimeout(() => { cleanup(); resolve(null); }, 15000);
     const video = document.createElement('video');
     video.muted = true;
     video.playsInline = true;
+    video.preload = 'auto';
+    video.crossOrigin = 'anonymous';
+    video.setAttribute('playsinline', '');
+    video.setAttribute('webkit-playsinline', '');
     const url = URL.createObjectURL(blob);
-    video.src = url;
-    video.addEventListener('loadedmetadata', () => { video.currentTime = video.duration * ratio; });
-    video.addEventListener('seeked', () => {
-      const canvas = document.createElement('canvas');
-      canvas.width = video.videoWidth || 640;
-      canvas.height = video.videoHeight || 480;
-      canvas.getContext('2d').drawImage(video, 0, 0);
-      URL.revokeObjectURL(url);
-      resolve(canvas);
+    function cleanup() { clearTimeout(timeout); URL.revokeObjectURL(url); }
+    video.addEventListener('loadedmetadata', () => {
+      if (!video.duration || !isFinite(video.duration)) { cleanup(); resolve(null); return; }
+      video.currentTime = Math.max(0.01, video.duration * ratio);
     });
-    video.addEventListener('error', () => { URL.revokeObjectURL(url); resolve(null); });
+    video.addEventListener('seeked', () => {
+      try {
+        const w = video.videoWidth || 640;
+        const h = video.videoHeight || 480;
+        const canvas = document.createElement('canvas');
+        canvas.width = w;
+        canvas.height = h;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(video, 0, 0, w, h);
+        const px = ctx.getImageData(0, 0, 1, 1).data;
+        if (px[0] === 0 && px[1] === 0 && px[2] === 0 && px[3] === 0) {
+          video.currentTime = Math.min(video.duration - 0.1, video.currentTime + 0.5);
+          return;
+        }
+        cleanup();
+        resolve(canvas);
+      } catch (e) { cleanup(); resolve(null); }
+    });
+    video.addEventListener('error', () => { cleanup(); resolve(null); });
+    video.src = url;
+    video.load();
   });
 }
 
@@ -689,15 +722,27 @@ async function runMediaPipeAnalysis() {
 
     progressEl.style.width = '35%';
     statusEl.textContent = 'シュートの3つの決定的瞬間を抽出中...';
-    const frames = await Promise.all([
-      extractFrameAtTime(videoFile, 0.25),
-      extractFrameAtTime(videoFile, 0.60),
-      extractFrameAtTime(videoFile, 0.85)
-    ]);
+    const ratios = [0.25, 0.60, 0.85];
+    const fallbackRatios = [0.20, 0.50, 0.80];
+    let frames = await Promise.all(ratios.map(r => extractFrameAtTime(videoFile, r)));
+    for (let i = 0; i < frames.length; i++) {
+      if (!frames[i]) frames[i] = await extractFrameAtTime(videoFile, fallbackRatios[i]);
+    }
+    const validFrames = frames.filter(f => f !== null).length;
+    if (validFrames === 0) {
+      statusEl.textContent = '動画のフレーム抽出に失敗しました。\n別の動画で試してみてください。';
+      progressEl.style.width = '100%';
+      setTimeout(() => proceedToSpec(), 3000);
+      return;
+    }
     progressEl.style.width = '60%';
 
     statusEl.textContent = '関節の座標を計算しています...';
-    const results = frames.map(f => f ? landmarker.detect(f) : { landmarks: [] });
+    const results = frames.map(f => {
+      if (!f) return { landmarks: [] };
+      try { return landmarker.detect(f); }
+      catch (e) { console.warn('detect failed:', e); return { landmarks: [] }; }
+    });
     progressEl.style.width = '80%';
 
     const metrics = [
@@ -1037,7 +1082,7 @@ function handleFile(file) {
   const maxMB = 80;
   if (file.size > maxMB * 1024 * 1024) {
     const sizeMB = Math.round(file.size / 1024 / 1024);
-    showUploadError('動画のサイズを確認してください');
+    showUploadError('動画のファイルサイズが大きすぎます（' + sizeMB + 'MB）。\n30秒以内の短い動画で撮り直してみてください📱');
     return;
   }
   videoFile = file;
@@ -1099,13 +1144,13 @@ async function validateVideo() {
     if (answer.includes('YES')) {
       runMediaPipeAnalysis();
     } else {
-      showUploadError('動画のサイズを確認してください');
+      showUploadError('バスケットボールのシュート動画を撮影してアップロードしてください🏀\nリングが映っていなくても、シュートフォームが映っていればOKです！');
       btn.disabled = false;
     }
   } catch (e) {
     console.error(e);
     const msg = (e.message === 'file_too_large')
-      ? '動画のサイズを確認してください'
+      ? '動画のファイルサイズが大きすぎます。\n30秒以内の短い動画で撮り直してみてください📱'
       : 'ごめんなさい！🙇‍♂️現在、AIの分析サーバーが混み合っており、一時的にストップしました💦\n5〜10分ほど時間を置いてから、もう一度やり直してみてください！🙏';
     showUploadError(msg);
     btn.disabled = false;
