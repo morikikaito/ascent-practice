@@ -727,7 +727,12 @@ async function runMediaPipeAnalysis() {
     statusEl.textContent = 'MediaPipeを初期化しています...\nしばらくお待ちください';
     progressEl.style.width = '15%';
     const landmarker = await initMediaPipe();
-    if (!landmarker) { proceedToSpec(); return; }
+    if (!landmarker) {
+      statusEl.textContent = 'フレームを抽出中...';
+      await extractFallbackFrames();
+      proceedToSpec();
+      return;
+    }
 
     progressEl.style.width = '35%';
     statusEl.textContent = 'シュートの3つの決定的瞬間を抽出中...';
@@ -739,9 +744,9 @@ async function runMediaPipeAnalysis() {
     }
     const validFrames = frames.filter(f => f !== null).length;
     if (validFrames === 0) {
-      statusEl.textContent = '動画のフレーム抽出に失敗しました。\n別の動画で試してみてください。';
-      progressEl.style.width = '100%';
-      setTimeout(() => proceedToSpec(), 3000);
+      statusEl.textContent = 'フレームを抽出中...';
+      await extractFallbackFrames();
+      setTimeout(() => proceedToSpec(), 1000);
       return;
     }
     progressEl.style.width = '60%';
@@ -772,7 +777,33 @@ async function runMediaPipeAnalysis() {
     displayMPResults(overlays, metrics);
   } catch (e) {
     console.error('MediaPipe error:', e);
+    await extractFallbackFrames();
     proceedToSpec();
+  }
+}
+
+async function extractFallbackFrames() {
+  try {
+    const ratios = [0.25, 0.55, 0.85];
+    const labels = [
+      { label: 'PHASE A — DIP', sub: 'ディップ（最下点）' },
+      { label: 'PHASE B — SETUP', sub: 'セットアップ（構え）' },
+      { label: 'PHASE C — RELEASE', sub: 'リリース（フォロースルー）' }
+    ];
+    const frames = await Promise.all(ratios.map(r => extractFrameAtTime(videoFile, r)));
+    skeletonFrameDataUrls = [];
+    frames.forEach((f, i) => {
+      if (f) {
+        skeletonFrameDataUrls.push({
+          label: labels[i].label,
+          sub: labels[i].sub,
+          src: f.toDataURL('image/jpeg', 0.85),
+          hasYellow: false
+        });
+      }
+    });
+  } catch (e) {
+    console.error('Fallback frame extraction failed:', e);
   }
 }
 
