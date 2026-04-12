@@ -326,7 +326,7 @@ input[type="file"] {
 
 <!-- PHASE: Resume Dialog -->
 <div id="phase-resume" class="phase">
-  <img src="images/kait.png" alt="ASCENT" style="width:240px;max-width:80%;margin:0 auto 32px;display:block;">
+  <img src="images/kait.png" alt="ASCENT" style="width:240px;max-width:80%;margin:0 auto 32px;display:block;">
   <div class="card">
     <p style="font-size:1rem;line-height:1.8;margin-bottom:24px;color:var(--text);">前回の診断が途中で中断されています。<br>途中から再開しますか？</p>
     <button id="btn-resume" class="btn-gold" style="margin-bottom:12px;width:100%;">再開する</button>
@@ -336,7 +336,7 @@ input[type="file"] {
 
 <!-- PHASE 0: Already Diagnosed -->
 <div id="phase-diagnosed" class="phase">
-  <img src="images/kait.png" alt="ASCENT" style="width:240px;max-width:80%;margin:0 auto 32px;display:block;">
+  <img src="images/kait.png" alt="ASCENT" style="width:240px;max-width:80%;margin:0 auto 32px;display:block;">
   <div class="card">
     <div class="diagnosed-text">動画の送信ありがとうございます！
 申し訳ありません、AIシュート診断はお一人様1回限りとなっています。
@@ -373,7 +373,7 @@ UNLEASHプランをご検討ください👇</div>
 </div>
 
 <div id="phase-upload" class="phase">
-  <img src="images/kait.png" alt="ASCENT" style="width:240px;max-width:80%;margin:0 auto 32px;display:block;">
+  <img src="images/kait.png" alt="ASCENT" style="width:240px;max-width:80%;margin:0 auto 32px;display:block;">
   <div class="card">
     <h2 style="font-size:1.1rem;margin-bottom:16px;text-align:center;">シュート動画をアップロード</h2>
     <div id="upload-area" class="upload-area">
@@ -394,7 +394,7 @@ UNLEASHプランをご検討ください👇</div>
 
 <!-- PHASE 2: Spec Input -->
 <div id="phase-spec" class="phase">
-  <img src="images/kait.png" alt="ASCENT" style="width:240px;max-width:80%;margin:0 auto 32px;display:block;">
+  <img src="images/kait.png" alt="ASCENT" style="width:240px;max-width:80%;margin:0 auto 32px;display:block;">
   <div class="card">
     <div class="processing-msg" style="margin-bottom:24px;">添削素材の送信ありがとうございます！🎥✨
 AIがシュートフォームの分析を開始しました。
@@ -443,7 +443,7 @@ AIがシュートフォームの分析を開始しました。
 
 <!-- PHASE 3: Processing -->
 <div id="phase-processing" class="phase">
-  <img src="images/kait.png" alt="ASCENT" style="width:240px;max-width:80%;margin:0 auto 32px;display:block;">
+  <img src="images/kait.png" alt="ASCENT" style="width:240px;max-width:80%;margin:0 auto 32px;display:block;">
   <div class="card" style="text-align:center;">
     <div class="spinner"></div>
     <div id="processing-text" class="processing-msg"></div>
@@ -453,14 +453,7 @@ AIがシュートフォームの分析を開始しました。
 
 <!-- PHASE 4: Questions -->
 <div id="phase-question" class="phase">
-  <img src="images/kait.png" alt="ASCENT" style="width:240px;max-width:80%;margin:0 auto 32px;display:block;">
-  <div id="question-frames" style="display:none;margin-bottom:16px;">
-    <div id="question-frames-toggle" style="cursor:pointer;padding:10px 16px;background:#13131F;border:1px solid rgba(201,168,76,0.25);border-radius:10px;display:flex;justify-content:space-between;align-items:center;">
-      <span style="font-family:Cinzel,serif;font-size:10px;letter-spacing:0.2em;color:#C9A84C;">YOUR SHOOTING FORM</span>
-      <span id="frames-toggle-icon" style="font-size:12px;color:rgba(245,240,232,0.55);transition:transform 0.3s;">▼</span>
-    </div>
-    <div id="question-frames-images" style="max-height:0;overflow:hidden;transition:max-height 0.4s ease;margin-top:8px;"></div>
-  </div>
+  <img src="images/kait.png" alt="ASCENT" style="width:240px;max-width:80%;margin:0 auto 32px;display:block;">
   <div class="card">
     <div id="question-text" style="line-height:1.9;font-size:0.93rem;margin-bottom:20px;white-space:pre-wrap;"></div>
     <div id="choices-container"></div>
@@ -474,14 +467,7 @@ AIがシュートフォームの分析を開始しました。
 
 <!-- PHASE 5: Result -->
 <div id="phase-result" class="phase">
-  <img src="images/kait.png" alt="ASCENT" style="width:240px;max-width:80%;margin:0 auto 32px;display:block;">
-  <div id="result-frames" style="display:none;margin-bottom:16px;">
-    <div id="result-frames-toggle" style="cursor:pointer;padding:10px 16px;background:#13131F;border:1px solid rgba(201,168,76,0.25);border-radius:10px;display:flex;justify-content:space-between;align-items:center;">
-      <span style="font-family:Cinzel,serif;font-size:10px;letter-spacing:0.2em;color:#C9A84C;">YOUR SHOOTING FORM</span>
-      <span id="result-toggle-icon" style="font-size:12px;color:rgba(245,240,232,0.55);transition:transform 0.3s;">▼</span>
-    </div>
-    <div id="result-frames-images" style="max-height:0;overflow:hidden;transition:max-height 0.4s ease;margin-top:8px;"></div>
-  </div>
+  <img src="images/kait.png" alt="ASCENT" style="width:240px;max-width:80%;margin:0 auto 32px;display:block;">
   <div class="card">
     <div id="result-content" class="result-block"></div>
   </div>
@@ -594,6 +580,7 @@ function extractFrameAtTime(blob, ratio) {
     video.addEventListener('error', () => { cleanup(); resolve(null); });
     video.src = url;
     video.load();
+    video.play().then(() => video.pause()).catch(() => {});
   });
 }
 
@@ -1285,7 +1272,8 @@ function buildFrameGallery(destId, wrapperId, toggleId, iconId) {
     dest.appendChild(div);
   });
   wrapper.style.display = 'block';
-  dest.style.maxHeight = '0px';
+  dest.style.maxHeight = '2000px';
+  document.getElementById(iconId).style.transform = 'rotate(180deg)';
   const toggle = document.getElementById(toggleId);
   if (toggle) {
     toggle.onclick = function() {
