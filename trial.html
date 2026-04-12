@@ -458,13 +458,6 @@ AIがシュートフォームの分析を開始しました。
 <!-- PHASE 4: Questions -->
 <div id="phase-question" class="phase">
   <img src="images/kait.png" alt="ASCENT" style="width:240px;max-width:80%;margin:0 auto 32px;display:block;">
-  <div id="question-frames" style="display:none;margin-bottom:16px;">
-    <div id="question-frames-toggle" style="cursor:pointer;padding:10px 16px;background:#13131F;border:1px solid rgba(201,168,76,0.25);border-radius:10px;display:flex;justify-content:space-between;align-items:center;">
-      <span style="font-family:Cinzel,serif;font-size:10px;letter-spacing:0.2em;color:#C9A84C;">YOUR SHOOTING FORM</span>
-      <span id="frames-toggle-icon" style="font-size:12px;color:rgba(245,240,232,0.55);transition:transform 0.3s;">&#x25BC;</span>
-    </div>
-    <div id="question-frames-images" style="max-height:0;overflow:hidden;transition:max-height 0.4s ease;margin-top:8px;"></div>
-  </div>
   <div class="card">
     <div id="question-text" style="line-height:1.9;font-size:0.93rem;margin-bottom:20px;white-space:pre-wrap;"></div>
     <div id="choices-container"></div>
@@ -479,13 +472,6 @@ AIがシュートフォームの分析を開始しました。
 <!-- PHASE 5: Result -->
 <div id="phase-result" class="phase">
   <img src="images/kait.png" alt="ASCENT" style="width:240px;max-width:80%;margin:0 auto 32px;display:block;">
-  <div id="result-frames" style="display:none;margin-bottom:16px;">
-    <div id="result-frames-toggle" style="cursor:pointer;padding:10px 16px;background:#13131F;border:1px solid rgba(201,168,76,0.25);border-radius:10px;display:flex;justify-content:space-between;align-items:center;">
-      <span style="font-family:Cinzel,serif;font-size:10px;letter-spacing:0.2em;color:#C9A84C;">YOUR SHOOTING FORM</span>
-      <span id="result-toggle-icon" style="font-size:12px;color:rgba(245,240,232,0.55);transition:transform 0.3s;">&#x25BC;</span>
-    </div>
-    <div id="result-frames-images" style="max-height:0;overflow:hidden;transition:max-height 0.4s ease;margin-top:8px;"></div>
-  </div>
   <div class="card">
     <div id="result-content" class="result-block"></div>
   </div>
@@ -741,6 +727,104 @@ function displayMPResults(canvases, metrics) {
   document.getElementById('mp-results-section').style.display = 'block';
 }
 
+const SKELETON_CONNECTIONS = [
+  ['LEFT_SHOULDER','RIGHT_SHOULDER'],['LEFT_SHOULDER','LEFT_ELBOW'],['LEFT_ELBOW','LEFT_WRIST'],
+  ['RIGHT_SHOULDER','RIGHT_ELBOW'],['RIGHT_ELBOW','RIGHT_WRIST'],['LEFT_SHOULDER','LEFT_HIP'],
+  ['RIGHT_SHOULDER','RIGHT_HIP'],['LEFT_HIP','RIGHT_HIP'],['LEFT_HIP','LEFT_KNEE'],
+  ['LEFT_KNEE','LEFT_ANKLE'],['RIGHT_HIP','RIGHT_KNEE'],['RIGHT_KNEE','RIGHT_ANKLE'],
+  ['NOSE','LEFT_SHOULDER'],['NOSE','RIGHT_SHOULDER']
+];
+
+function drawSkeletonOnCanvas(canvas, landmarks) {
+  const ctx = canvas.getContext('2d');
+  const w = canvas.width, h = canvas.height;
+  const lmMap = {};
+  landmarks.forEach(lm => { lmMap[lm.name] = lm; });
+
+  ctx.strokeStyle = '#C9A84C';
+  ctx.lineWidth = Math.max(2, Math.round(w / 180));
+  ctx.shadowColor = 'rgba(201,168,76,0.5)';
+  ctx.shadowBlur = 6;
+  SKELETON_CONNECTIONS.forEach(([a, b]) => {
+    const la = lmMap[a], lb = lmMap[b];
+    if (la && lb && (la.v || 0) > 0.2 && (lb.v || 0) > 0.2) {
+      ctx.beginPath();
+      ctx.moveTo(la.x * w, la.y * h);
+      ctx.lineTo(lb.x * w, lb.y * h);
+      ctx.stroke();
+    }
+  });
+  ctx.shadowBlur = 0;
+
+  const r = Math.max(3, Math.round(w / 120));
+  landmarks.forEach(lm => {
+    if ((lm.v || 0) > 0.2) {
+      ctx.beginPath();
+      ctx.arc(lm.x * w, lm.y * h, r, 0, 2 * Math.PI);
+      ctx.fillStyle = '#C9A84C';
+      ctx.fill();
+      ctx.strokeStyle = '#0D0D1A';
+      ctx.lineWidth = 1;
+      ctx.stroke();
+    }
+  });
+  return canvas;
+}
+
+async function serverPoseDetection(canvasFrames, statusEl, progressEl) {
+  statusEl.textContent = 'AI骨格解析中...（サーバー処理）';
+  progressEl.style.width = '50%';
+
+  const base64Frames = canvasFrames.map(f => f ? f.toDataURL('image/jpeg', 0.7).split(',')[1] : null);
+  const validFrames = base64Frames.filter(f => f);
+  if (validFrames.length === 0) return null;
+
+  try {
+    const res = await fetch(WORKER_BASE + '/detect-pose', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ frames: base64Frames.filter(f => f) })
+    });
+    if (!res.ok) throw new Error('Server pose error: ' + res.status);
+    const data = await res.json();
+    if (data.error) throw new Error(data.error);
+
+    progressEl.style.width = '80%';
+    statusEl.textContent = '骨格線を描画中...';
+
+    const labels = [
+      { label: 'PHASE A — DIP', sub: 'ディップ（最下点）' },
+      { label: 'PHASE B — SETUP', sub: 'セットアップ（構え）' },
+      { label: 'PHASE C — RELEASE', sub: 'リリース（フォロースルー）' }
+    ];
+
+    skeletonFrameDataUrls = [];
+    let frameIdx = 0;
+    canvasFrames.forEach((canvas, i) => {
+      if (!canvas) return;
+      const frameLandmarks = data.frames?.[frameIdx]?.landmarks || [];
+      frameIdx++;
+      if (frameLandmarks.length > 0) {
+        drawSkeletonOnCanvas(canvas, frameLandmarks);
+      }
+      const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
+      skeletonFrameDataUrls.push({
+        label: labels[i].label,
+        sub: labels[i].sub,
+        src: dataUrl,
+        hasYellow: frameLandmarks.length > 0
+      });
+    });
+
+    frameImages = canvasFrames.map(f => f ? f.toDataURL('image/jpeg', 0.7).split(',')[1] : null);
+    progressEl.style.width = '100%';
+    return true;
+  } catch (e) {
+    console.error('Server pose detection failed:', e);
+    return null;
+  }
+}
+
 async function runMediaPipeAnalysis() {
   showPhase('phase-mediapipe');
   const statusEl = document.getElementById('mp-status');
@@ -748,58 +832,56 @@ async function runMediaPipeAnalysis() {
   document.getElementById('mp-loading-section').style.display = 'block';
   document.getElementById('mp-results-section').style.display = 'none';
 
-  try {
-    statusEl.textContent = 'MediaPipeを初期化しています...\nしばらくお待ちください';
-    progressEl.style.width = '15%';
-    const landmarker = await initMediaPipe();
-    if (!landmarker) {
-      statusEl.textContent = 'フレームを抽出中...';
-      await extractFallbackFrames();
-      proceedToSpec();
-      return;
-    }
+  const ratios = [0.25, 0.60, 0.85];
+  const fallbackRatios = [0.20, 0.50, 0.80];
 
-    progressEl.style.width = '35%';
-    statusEl.textContent = 'シュートの3つの決定的瞬間を抽出中...';
-    const ratios = [0.25, 0.60, 0.85];
-    const fallbackRatios = [0.20, 0.50, 0.80];
+  try {
+    statusEl.textContent = 'フレームを抽出中...';
+    progressEl.style.width = '20%';
     let frames = await Promise.all(ratios.map(r => extractFrameAtTime(videoFile, r)));
     for (let i = 0; i < frames.length; i++) {
       if (!frames[i]) frames[i] = await extractFrameAtTime(videoFile, fallbackRatios[i]);
     }
     const validFrames = frames.filter(f => f !== null).length;
     if (validFrames === 0) {
-      statusEl.textContent = 'フレームを抽出中...';
       await extractFallbackFrames();
-      setTimeout(() => proceedToSpec(), 1000);
+      proceedToSpec();
       return;
     }
-    progressEl.style.width = '60%';
 
-    statusEl.textContent = '関節の座標を計算しています...';
-    const results = frames.map(f => {
-      if (!f) return { landmarks: [] };
-      try { return landmarker.detect(f); }
-      catch (e) { console.warn('detect failed:', e); return { landmarks: [] }; }
-    });
-    progressEl.style.width = '80%';
+    statusEl.textContent = 'MediaPipeを初期化しています...';
+    progressEl.style.width = '30%';
+    const landmarker = await initMediaPipe();
 
-    const metrics = [
-      analyzeFrame(results[0].landmarks, 'dip'),
-      analyzeFrame(results[1].landmarks, 'setup'),
-      analyzeFrame(results[2].landmarks, 'release')
-    ];
-    mediapipeResults = { dip: metrics[0], setup: metrics[1], release: metrics[2] };
-
-    statusEl.textContent = 'Yellow Lightを生成しています...';
-    const overlays = frames.map((f, i) =>
-      f ? renderYellowLight(f, results[i].landmarks, metrics[i].yellowJoints) : null
-    );
-    progressEl.style.width = '100%';
-
-    frameImages = frames.map(f => f ? f.toDataURL('image/jpeg', 0.7).split(',')[1] : null);
-
-    displayMPResults(overlays, metrics);
+    if (landmarker) {
+      progressEl.style.width = '60%';
+      statusEl.textContent = '関節の座標を計算しています...';
+      const results = frames.map(f => {
+        if (!f) return { landmarks: [] };
+        try { return landmarker.detect(f); }
+        catch (e) { console.warn('detect failed:', e); return { landmarks: [] }; }
+      });
+      progressEl.style.width = '80%';
+      const metrics = [
+        analyzeFrame(results[0].landmarks, 'dip'),
+        analyzeFrame(results[1].landmarks, 'setup'),
+        analyzeFrame(results[2].landmarks, 'release')
+      ];
+      mediapipeResults = { dip: metrics[0], setup: metrics[1], release: metrics[2] };
+      statusEl.textContent = 'Yellow Lightを生成しています...';
+      const overlays = frames.map((f, i) =>
+        f ? renderYellowLight(f, results[i].landmarks, metrics[i].yellowJoints) : null
+      );
+      progressEl.style.width = '100%';
+      frameImages = frames.map(f => f ? f.toDataURL('image/jpeg', 0.7).split(',')[1] : null);
+      displayMPResults(overlays, metrics);
+    } else {
+      const serverResult = await serverPoseDetection(frames, statusEl, progressEl);
+      if (!serverResult) {
+        await extractFallbackFrames();
+      }
+      proceedToSpec();
+    }
   } catch (e) {
     console.error('MediaPipe error:', e);
     await extractFallbackFrames();
