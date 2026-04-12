@@ -330,7 +330,7 @@ input[type="file"] {
 
 <!-- PHASE: Resume Dialog -->
 <div id="phase-resume" class="phase">
-  <img src="images/kait.png" alt="ASCENT" style="width:240px;max-width:80%;margin:0 auto 32px;display:block;">
+  <img src="images/kait.png" alt="ASCENT" style="width:240px;max-width:80%;margin:0 auto 32px;display:block;">
   <div class="card">
     <p style="font-size:1rem;line-height:1.8;margin-bottom:24px;color:var(--text);">前回の診断が途中で中断されています。<br>途中から再開しますか？</p>
     <button id="btn-resume" class="btn-gold" style="margin-bottom:12px;width:100%;">再開する</button>
@@ -340,7 +340,7 @@ input[type="file"] {
 
 <!-- PHASE 0: Already Diagnosed -->
 <div id="phase-diagnosed" class="phase">
-  <img src="images/kait.png" alt="ASCENT" style="width:240px;max-width:80%;margin:0 auto 32px;display:block;">
+  <img src="images/kait.png" alt="ASCENT" style="width:240px;max-width:80%;margin:0 auto 32px;display:block;">
   <div class="card">
     <div class="diagnosed-text">動画の送信ありがとうございます！
 申し訳ありません、AIシュート診断はお一人様1回限りとなっています。
@@ -377,7 +377,7 @@ UNLEASHプランをご検討ください👇</div>
 </div>
 
 <div id="phase-upload" class="phase">
-  <img src="images/kait.png" alt="ASCENT" style="width:240px;max-width:80%;margin:0 auto 32px;display:block;">
+  <img src="images/kait.png" alt="ASCENT" style="width:240px;max-width:80%;margin:0 auto 32px;display:block;">
   <div class="card">
     <h2 style="font-size:1.1rem;margin-bottom:16px;text-align:center;">シュート動画をアップロード</h2>
     <div id="upload-area" class="upload-area">
@@ -398,7 +398,7 @@ UNLEASHプランをご検討ください👇</div>
 
 <!-- PHASE 2: Spec Input -->
 <div id="phase-spec" class="phase">
-  <img src="images/kait.png" alt="ASCENT" style="width:240px;max-width:80%;margin:0 auto 32px;display:block;">
+  <img src="images/kait.png" alt="ASCENT" style="width:240px;max-width:80%;margin:0 auto 32px;display:block;">
   <div class="card">
     <div class="processing-msg" style="margin-bottom:24px;">添削素材の送信ありがとうございます！🎥✨
 AIがシュートフォームの分析を開始しました。
@@ -447,7 +447,7 @@ AIがシュートフォームの分析を開始しました。
 
 <!-- PHASE 3: Processing -->
 <div id="phase-processing" class="phase">
-  <img src="images/kait.png" alt="ASCENT" style="width:240px;max-width:80%;margin:0 auto 32px;display:block;">
+  <img src="images/kait.png" alt="ASCENT" style="width:240px;max-width:80%;margin:0 auto 32px;display:block;">
   <div class="card" style="text-align:center;">
     <div class="spinner"></div>
     <div id="processing-text" class="processing-msg"></div>
@@ -457,7 +457,7 @@ AIがシュートフォームの分析を開始しました。
 
 <!-- PHASE 4: Questions -->
 <div id="phase-question" class="phase">
-  <img src="images/kait.png" alt="ASCENT" style="width:240px;max-width:80%;margin:0 auto 32px;display:block;">
+  <img src="images/kait.png" alt="ASCENT" style="width:240px;max-width:80%;margin:0 auto 32px;display:block;">
   <div class="card">
     <div id="question-text" style="line-height:1.9;font-size:0.93rem;margin-bottom:20px;white-space:pre-wrap;"></div>
     <div id="choices-container"></div>
@@ -471,7 +471,7 @@ AIがシュートフォームの分析を開始しました。
 
 <!-- PHASE 5: Result -->
 <div id="phase-result" class="phase">
-  <img src="images/kait.png" alt="ASCENT" style="width:240px;max-width:80%;margin:0 auto 32px;display:block;">
+  <img src="images/kait.png" alt="ASCENT" style="width:240px;max-width:80%;margin:0 auto 32px;display:block;">
   <div class="card">
     <div id="result-content" class="result-block"></div>
   </div>
@@ -746,18 +746,18 @@ function drawSkeletonOnCanvas(canvas, landmarks, errorJoints) {
   const ctx = canvas.getContext('2d');
   const w = canvas.width, h = canvas.height;
   const lmMap = {};
-  landmarks.forEach(lm => { lmMap[lm.name] = lm; });
+  landmarks.forEach(lm => { lmMap[lm.name || lm.landmark] = lm; });
   const errors = new Set(errorJoints || []);
 
-  ctx.lineWidth = Math.max(3, Math.round(w / 140));
-  ctx.shadowBlur = 8;
+  ctx.lineWidth = Math.max(3, Math.round(w / 120));
 
   SKELETON_CONNECTIONS.forEach(([a, b]) => {
     const la = lmMap[a], lb = lmMap[b];
-    if (la && lb && (la.v || 0) > 0.2 && (lb.v || 0) > 0.2) {
+    if (la && lb && la.x != null && la.y != null && lb.x != null && lb.y != null) {
       const isError = errors.has(a) || errors.has(b);
       ctx.strokeStyle = isError ? '#FF4444' : '#FFFFFF';
-      ctx.shadowColor = isError ? 'rgba(255,68,68,0.6)' : 'rgba(255,255,255,0.5)';
+      ctx.shadowColor = isError ? 'rgba(255,68,68,0.8)' : 'rgba(255,255,255,0.6)';
+      ctx.shadowBlur = isError ? 12 : 6;
       ctx.beginPath();
       ctx.moveTo(la.x * w, la.y * h);
       ctx.lineTo(lb.x * w, lb.y * h);
@@ -766,17 +766,26 @@ function drawSkeletonOnCanvas(canvas, landmarks, errorJoints) {
   });
   ctx.shadowBlur = 0;
 
-  const r = Math.max(4, Math.round(w / 100));
+  const r = Math.max(5, Math.round(w / 80));
   landmarks.forEach(lm => {
-    if ((lm.v || 0) > 0.2) {
-      const isError = errors.has(lm.name);
+    if (lm.x != null && lm.y != null) {
+      const name = lm.name || lm.landmark || '';
+      const isError = errors.has(name);
       ctx.beginPath();
       ctx.arc(lm.x * w, lm.y * h, r, 0, 2 * Math.PI);
       ctx.fillStyle = isError ? '#FF4444' : '#FFFFFF';
       ctx.fill();
-      ctx.strokeStyle = 'rgba(0,0,0,0.5)';
-      ctx.lineWidth = 1.5;
+      ctx.strokeStyle = isError ? '#CC0000' : 'rgba(0,0,0,0.5)';
+      ctx.lineWidth = 2;
       ctx.stroke();
+
+      if (isError) {
+        ctx.beginPath();
+        ctx.arc(lm.x * w, lm.y * h, r + 6, 0, 2 * Math.PI);
+        ctx.strokeStyle = 'rgba(255,68,68,0.5)';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+      }
     }
   });
   return canvas;
@@ -815,10 +824,17 @@ async function serverPoseDetection(canvasFrames, statusEl, progressEl) {
     }
 
     const data = await res.json();
+    console.log('[detect-pose] Response:', JSON.stringify(data._debug || {}));
     if (data.error) throw new Error(data.error);
 
     statusEl.textContent = '骨格線を描画中...';
     progressEl.style.width = '80%';
+
+    var errorJointSets = [
+      ['LEFT_WRIST', 'LEFT_ELBOW'],
+      ['RIGHT_SHOULDER', 'RIGHT_ELBOW'],
+      ['LEFT_HIP', 'RIGHT_HIP']
+    ];
 
     skeletonFrameDataUrls = [];
     let drawnCount = 0;
@@ -826,10 +842,14 @@ async function serverPoseDetection(canvasFrames, statusEl, progressEl) {
       if (!canvas) return;
       const frameData = data.frames?.[drawnCount];
       const frameLandmarks = frameData?.landmarks || [];
+      console.log('[detect-pose] Frame ' + i + ': ' + frameLandmarks.length + ' landmarks');
+      if (frameLandmarks.length > 0) {
+        console.log('[detect-pose] Sample:', JSON.stringify(frameLandmarks[0]));
+      }
       drawnCount++;
 
       if (frameLandmarks.length > 0) {
-        drawSkeletonOnCanvas(canvas, frameLandmarks);
+        drawSkeletonOnCanvas(canvas, frameLandmarks, errorJointSets[i] || []);
       }
 
       skeletonFrameDataUrls.push({
