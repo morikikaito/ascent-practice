@@ -778,13 +778,10 @@ function proceedToSpec() {
 // ============================================================
 // CONFIG
 // ============================================================
-const GEMINI_API_KEY = 'AIzaSyDWkHIXojpg5-8p_2gIPI0klDWVczZTmmI';
-const DIAGNOSE_ENDPOINT = 'https://ascent-agent.moriki-beaters.workers.dev/diagnose';
+const WORKER_BASE = 'https://ascent-agent.moriki-beaters.workers.dev';
+const DIAGNOSE_ENDPOINT = WORKER_BASE + '/diagnose';
+const SAVE_ENDPOINT = WORKER_BASE + '/save-diagnosis';
 const UNLEASH_URL = 'https://buy.stripe.com/28EcN47bXbeA8G4bMHf7i0B';
-
-// Airtable
-const AIRTABLE_API_KEY = 'patEn5M8H49RYQmWj.6d4be27dc951682ad20312bc43b3062c01de6a5632c513635a4e0d567ad2699a';
-const AIRTABLE_BASE_ID = 'approNTUIwA2HTRFO';
 const AIRTABLE_TABLE_CUSTOMERS = 'tblI9tweL01ALYll9';
 const AIRTABLE_TABLE_DIAGNOSIS = 'tblw7UmDwboYb4P1O';
 let diagnosisStartTime = null;
@@ -992,15 +989,15 @@ document.addEventListener('DOMContentLoaded', async () => {
 async function checkUserTier() {
   if (lineUid === 'anonymous') return;
   try {
-    const formula = encodeURIComponent(`{LINE ID}='${lineUid}'`);
-    const url = `https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/${AIRTABLE_TABLE_CUSTOMERS}?filterByFormula=${formula}&maxRecords=1`;
-    const res = await fetch(url, {
-      headers: { 'Authorization': `Bearer ${AIRTABLE_API_KEY}` }
+    const res = await fetch(WORKER_BASE + '/verify-customer', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ lineUid, tableId: AIRTABLE_TABLE_CUSTOMERS })
     });
     if (!res.ok) return;
     const data = await res.json();
-    if (data.records && data.records.length > 0) {
-      const fields = data.records[0].fields;
+    if (data.found) {
+      const fields = data.fields;
       const hasUnleash = fields['fldMdXQ1KVrOjPkrA'] === true;
       const hasPro = fields['fldsm6toargqzNba6'] === true;
       const hasLite = fields['fldx9r5emLQAN2y0u'] === true;
@@ -1194,40 +1191,18 @@ async function startDiagnosis(specs) {
   ];
 
   try {
-    let responseText = '';
-    try {
-      const res = await fetch(DIAGNOSE_ENDPOINT, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ system: SYSTEM_PROMPT, messages: conversationHistory })
-      });
-      if (!res.ok) {
-        const errText = await res.text();
-        throw new Error('Worker error ' + res.status + ': ' + errText.substring(0, 200));
-      }
-      const data = await res.json();
-      if (data.error) throw new Error(data.error);
-      responseText = data.text;
-    } catch (workerErr) {
-      console.warn('Worker failed, falling back to Gemini:', workerErr.message);
-      const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`;
-      const geminiMessages = [{ role: 'user', parts: [{ text: conversationHistory[0].content }] }];
-      const gRes = await fetch(geminiUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          system_instruction: { parts: [{ text: SYSTEM_PROMPT }] },
-          contents: geminiMessages
-        })
-      });
-      if (!gRes.ok) {
-        const gErr = await gRes.text();
-        throw new Error('Geminiもエラー: ' + gRes.status + ' / Worker: ' + workerErr.message);
-      }
-      const gData = await gRes.json();
-      responseText = gData.candidates?.[0]?.content?.parts?.[0]?.text || '';
+    const res = await fetch(DIAGNOSE_ENDPOINT, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ system: SYSTEM_PROMPT, messages: conversationHistory })
+    });
+    if (!res.ok) {
+      const errText = await res.text();
+      throw new Error('API error ' + res.status + ': ' + errText.substring(0, 200));
     }
-
+    const data = await res.json();
+    if (data.error) throw new Error(data.error);
+    const responseText = data.text;
     if (!responseText) throw new Error('AIから応答がありません');
 
     conversationHistory.push({ role: 'assistant', content: responseText });
@@ -1501,62 +1476,48 @@ async function saveToAirtable(finalDiagnosisText) {
   const firstModelResponse = conversationHistory.find(m => m.role === 'assistant');
   const validationResult = firstModelResponse ? (typeof firstModelResponse.content === 'string' ? firstModelResponse.content.substring(0, 500) : '') : '';
 
-  const headers = {
-    'Authorization': `Bearer ${AIRTABLE_API_KEY}`,
-    'Content-Type': 'application/json'
-  };
-
-  // Table 1: 顧客名簿
-  const customerRecord = {
-    records: [{
-      fields: {
-        'fld4RhAWdqYWt50XO': lineUid,
-        'fldkNUgvWW3krnvo6': diagnosisStartTime || now,
-        'fldrs8Y2lqU9MWaZF': now,
-        'fldLNHW30ufTyMjxT': '体験版',
-        'fldQfIq8ElWOiphLJ': true,
-        'fldngZ5GDRGmRRt20': historyJson,
-        'fldx9r5emLQAN2y0u': false,
-        'fldMdXQ1KVrOjPkrA': false,
-        'fldsm6toargqzNba6': false
-      }
-    }]
-  };
-
-  // Table 2: 診断データ
   const mpSummary = mediapipeResults ? [
     mediapipeResults.dip ? 'DIP: elbow=' + (mediapipeResults.dip.elbowAngle||'--') + '° hip=' + (mediapipeResults.dip.hipDiff||'--') + ' yellow=' + (mediapipeResults.dip.yellowJoints||[]).join(',') : '',
     mediapipeResults.setup ? 'SETUP: elbow=' + (mediapipeResults.setup.elbowAngle||'--') + '° hip=' + (mediapipeResults.setup.hipDiff||'--') + ' yellow=' + (mediapipeResults.setup.yellowJoints||[]).join(',') : '',
     mediapipeResults.release ? 'RELEASE: elbow=' + (mediapipeResults.release.elbowAngle||'--') + '° hip=' + (mediapipeResults.release.hipDiff||'--') + ' yellow=' + (mediapipeResults.release.yellowJoints||[]).join(',') : ''
   ].filter(s => s).join('\n') : '';
 
-  const diagnosisRecord = {
-    records: [{
-      fields: {
-        'fldA8jKroau7sPZyw': specsJson + (mpSummary ? '\n\n【MediaPipe】\n' + mpSummary : ''),
-        'fldOuSlI4A0XfgLxT': handText,
-        'fld6o41AtG3sRs0aL': validationResult,
-        'fldsEdzhF214j5DjU': 3,
-        'fldthaxMIyG1bS6gx': historyJson,
-        'fld4BYepPDaArrvYp': answersText,
-        'fldj3EWDv3k8bvrd7': finalDiagnosisText,
-        'fld30k5IyhncbtbNW': userTier === 'vip'
-      }
-    }]
-  };
-
-  const baseUrl = `https://api.airtable.com/v0/${AIRTABLE_BASE_ID}`;
-
   try {
-    await Promise.all([
-      fetch(`${baseUrl}/${AIRTABLE_TABLE_CUSTOMERS}`, {
-        method: 'POST', headers, body: JSON.stringify(customerRecord)
-      }).then(r => { if (!r.ok) throw new Error(`Customer table: ${r.status}`); }),
-      fetch(`${baseUrl}/${AIRTABLE_TABLE_DIAGNOSIS}`, {
-        method: 'POST', headers, body: JSON.stringify(diagnosisRecord)
-      }).then(r => { if (!r.ok) throw new Error(`Diagnosis table: ${r.status}`); })
-    ]);
-    console.log('Airtable: saved successfully');
+    const res = await fetch(SAVE_ENDPOINT, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        customer: {
+          tableId: AIRTABLE_TABLE_CUSTOMERS,
+          fields: {
+            'fld4RhAWdqYWt50XO': lineUid,
+            'fldkNUgvWW3krnvo6': diagnosisStartTime || now,
+            'fldrs8Y2lqU9MWaZF': now,
+            'fldLNHW30ufTyMjxT': '体験版',
+            'fldQfIq8ElWOiphLJ': true,
+            'fldngZ5GDRGmRRt20': historyJson,
+            'fldx9r5emLQAN2y0u': false,
+            'fldMdXQ1KVrOjPkrA': false,
+            'fldsm6toargqzNba6': false
+          }
+        },
+        diagnosis: {
+          tableId: AIRTABLE_TABLE_DIAGNOSIS,
+          fields: {
+            'fldA8jKroau7sPZyw': specsJson + (mpSummary ? '\n\n【MediaPipe】\n' + mpSummary : ''),
+            'fldOuSlI4A0XfgLxT': handText,
+            'fld6o41AtG3sRs0aL': validationResult,
+            'fldsEdzhF214j5DjU': 3,
+            'fldthaxMIyG1bS6gx': historyJson,
+            'fld4BYepPDaArrvYp': answersText,
+            'fldj3EWDv3k8bvrd7': finalDiagnosisText,
+            'fld30k5IyhncbtbNW': userTier === 'vip'
+          }
+        }
+      })
+    });
+    if (!res.ok) throw new Error('Save failed: ' + res.status);
+    console.log('Airtable: saved via Worker');
   } catch (e) {
     console.error('Airtable save failed:', e);
   }

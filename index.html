@@ -587,8 +587,7 @@ html, body {
    ASCENT PRACTICE v3 Phase2 — CORE LOGIC
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
 
-/* ① プラン別パスワード */
-const PLAN_PASSWORDS = { lite: 'LITE2026', unleash: 'UNLEASH2026', pro: 'PRO2026' };
+const WORKER_BASE = 'https://ascent-agent.moriki-beaters.workers.dev';
 
 const TITLE_THRESHOLDS = [
   { min: 1500, name: 'PRO' }, { min: 500, name: 'UNLEASHED' },
@@ -702,20 +701,30 @@ function selectLoginPlan(plan) {
   state.selectedPlan = plan;
   document.querySelectorAll('.plan-opt').forEach(o => o.classList.toggle('active', o.dataset.plan === plan));
 }
-function login() {
+async function login() {
   const val = document.getElementById('password-input').value.trim();
   const err = document.getElementById('login-error');
   const plan = state.selectedPlan;
-  const correctPw = PLAN_PASSWORDS[plan];
-  if (val === correctPw) {
-    err.textContent = '';
-    localStorage.setItem('ascent_auth', Date.now().toString());
-    localStorage.setItem('currentPlan', plan);
-    showScreen('screen-home');
-  } else {
-    err.textContent = 'アクセスコードが正しくありません';
-    document.getElementById('password-input').value = '';
-    document.getElementById('password-input').focus();
+  err.textContent = '確認中...';
+  try {
+    const res = await fetch(WORKER_BASE + '/verify-access', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ plan, password: val })
+    });
+    const data = await res.json();
+    if (data.ok) {
+      err.textContent = '';
+      localStorage.setItem('ascent_auth', Date.now().toString());
+      localStorage.setItem('currentPlan', plan);
+      showScreen('screen-home');
+    } else {
+      err.textContent = 'アクセスコードが正しくありません';
+      document.getElementById('password-input').value = '';
+      document.getElementById('password-input').focus();
+    }
+  } catch (e) {
+    err.textContent = '通信エラーが発生しました';
   }
 }
 function logout() {
