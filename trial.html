@@ -457,14 +457,7 @@ AIがシュートフォームの分析を開始しました。
 
 <!-- PHASE 4: Questions -->
 <div id="phase-question" class="phase">
-  <img src="images/kait.png" alt="ASCENT" style="width:240px;max-width:80%%;margin:0 auto 32px;display:block;">
-  <div id="question-frames" style="display:none;margin-bottom:16px;">
-    <div id="question-frames-toggle" style="cursor:pointer;padding:10px 16px;background:#13131F;border:1px solid rgba(201,168,76,0.25);border-radius:10px;display:flex;justify-content:space-between;align-items:center;">
-      <span style="font-family:Cinzel,serif;font-size:10px;letter-spacing:0.2em;color:#C9A84C;">YOUR SHOOTING FORM</span>
-      <span id="frames-toggle-icon" style="font-size:12px;color:rgba(245,240,232,0.55);transition:transform 0.3s;">&#x25BC;</span>
-    </div>
-    <div id="question-frames-images" style="max-height:2000px;overflow:hidden;transition:max-height 0.4s ease;margin-top:8px;"></div>
-  </div>
+  <img src="images/kait.png" alt="ASCENT" style="width:240px;max-width:80%;margin:0 auto 32px;display:block;">
   <div class="card">
     <div id="question-text" style="line-height:1.9;font-size:0.93rem;margin-bottom:20px;white-space:pre-wrap;"></div>
     <div id="choices-container"></div>
@@ -478,14 +471,7 @@ AIがシュートフォームの分析を開始しました。
 
 <!-- PHASE 5: Result -->
 <div id="phase-result" class="phase">
-  <img src="images/kait.png" alt="ASCENT" style="width:240px;max-width:80%%;margin:0 auto 32px;display:block;">
-  <div id="result-frames" style="display:none;margin-bottom:16px;">
-    <div id="result-frames-toggle" style="cursor:pointer;padding:10px 16px;background:#13131F;border:1px solid rgba(201,168,76,0.25);border-radius:10px;display:flex;justify-content:space-between;align-items:center;">
-      <span style="font-family:Cinzel,serif;font-size:10px;letter-spacing:0.2em;color:#C9A84C;">YOUR SHOOTING FORM</span>
-      <span id="result-toggle-icon" style="font-size:12px;color:rgba(245,240,232,0.55);transition:transform 0.3s;">&#x25BC;</span>
-    </div>
-    <div id="result-frames-images" style="max-height:2000px;overflow:hidden;transition:max-height 0.4s ease;margin-top:8px;"></div>
-  </div>
+  <img src="images/kait.png" alt="ASCENT" style="width:240px;max-width:80%;margin:0 auto 32px;display:block;">
   <div class="card">
     <div id="result-content" class="result-block"></div>
   </div>
@@ -741,6 +727,13 @@ function displayMPResults(canvases, metrics) {
   document.getElementById('mp-results-section').style.display = 'block';
 }
 
+function applyBlueFilter(canvas) {
+  const ctx = canvas.getContext('2d');
+  ctx.fillStyle = 'rgba(8, 20, 50, 0.4)';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  return canvas;
+}
+
 const SKELETON_CONNECTIONS = [
   ['LEFT_SHOULDER','RIGHT_SHOULDER'],['LEFT_SHOULDER','LEFT_ELBOW'],['LEFT_ELBOW','LEFT_WRIST'],
   ['RIGHT_SHOULDER','RIGHT_ELBOW'],['RIGHT_ELBOW','RIGHT_WRIST'],['LEFT_SHOULDER','LEFT_HIP'],
@@ -787,55 +780,82 @@ function drawSkeletonOnCanvas(canvas, landmarks) {
 
 async function serverPoseDetection(canvasFrames, statusEl, progressEl) {
   statusEl.textContent = 'AI骨格解析中...（サーバー処理）';
-  progressEl.style.width = '50%';
+  progressEl.style.width = '40%';
 
-  const base64Frames = canvasFrames.map(f => f ? f.toDataURL('image/jpeg', 0.7).split(',')[1] : null);
-  const validFrames = base64Frames.filter(f => f);
-  if (validFrames.length === 0) return null;
+  const labels = [
+    { label: 'PHASE A — DIP', sub: 'ディップ（最下点）' },
+    { label: 'PHASE B — SETUP', sub: 'セットアップ（構え）' },
+    { label: 'PHASE C — RELEASE', sub: 'リリース（フォロースルー）' }
+  ];
+
+  const validCanvases = canvasFrames.filter(f => f);
+  if (validCanvases.length === 0) return null;
+
+  validCanvases.forEach(c => applyBlueFilter(c));
+
+  const base64Frames = validCanvases.map(f => f.toDataURL('image/jpeg', 0.6).split(',')[1]);
 
   try {
+    statusEl.textContent = 'AI骨格解析中...（画像送信中）';
+    progressEl.style.width = '50%';
+
     const res = await fetch(WORKER_BASE + '/detect-pose', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ frames: base64Frames.filter(f => f) })
+      body: JSON.stringify({ frames: base64Frames })
     });
-    if (!res.ok) throw new Error('Server pose error: ' + res.status);
+
+    if (!res.ok) {
+      const errText = await res.text().catch(() => '');
+      throw new Error('Server ' + res.status + ': ' + errText.substring(0, 100));
+    }
+
     const data = await res.json();
     if (data.error) throw new Error(data.error);
 
-    progressEl.style.width = '80%';
     statusEl.textContent = '骨格線を描画中...';
-
-    const labels = [
-      { label: 'PHASE A — DIP', sub: 'ディップ（最下点）' },
-      { label: 'PHASE B — SETUP', sub: 'セットアップ（構え）' },
-      { label: 'PHASE C — RELEASE', sub: 'リリース（フォロースルー）' }
-    ];
+    progressEl.style.width = '80%';
 
     skeletonFrameDataUrls = [];
-    let frameIdx = 0;
+    let drawnCount = 0;
     canvasFrames.forEach((canvas, i) => {
       if (!canvas) return;
-      const frameLandmarks = data.frames?.[frameIdx]?.landmarks || [];
-      frameIdx++;
+      const frameData = data.frames?.[drawnCount];
+      const frameLandmarks = frameData?.landmarks || [];
+      drawnCount++;
+
       if (frameLandmarks.length > 0) {
         drawSkeletonOnCanvas(canvas, frameLandmarks);
       }
-      const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
+
       skeletonFrameDataUrls.push({
         label: labels[i].label,
         sub: labels[i].sub,
-        src: dataUrl,
+        src: canvas.toDataURL('image/jpeg', 0.85),
         hasYellow: frameLandmarks.length > 0
       });
     });
 
     frameImages = canvasFrames.map(f => f ? f.toDataURL('image/jpeg', 0.7).split(',')[1] : null);
     progressEl.style.width = '100%';
+    statusEl.textContent = '骨格解析完了！ (' + drawnCount + 'フレーム)';
     return true;
   } catch (e) {
     console.error('Server pose detection failed:', e);
-    return null;
+    statusEl.textContent = '骨格検出エラー: ' + e.message.substring(0, 80);
+
+    skeletonFrameDataUrls = [];
+    canvasFrames.forEach((canvas, i) => {
+      if (!canvas) return;
+      skeletonFrameDataUrls.push({
+        label: labels[i].label,
+        sub: labels[i].sub,
+        src: canvas.toDataURL('image/jpeg', 0.85),
+        hasYellow: false
+      });
+    });
+    frameImages = canvasFrames.map(f => f ? f.toDataURL('image/jpeg', 0.7).split(',')[1] : null);
+    return true;
   }
 }
 
@@ -915,6 +935,7 @@ async function extractFallbackFrames() {
     skeletonFrameDataUrls = [];
     frames.forEach((f, i) => {
       if (f) {
+        applyBlueFilter(f);
         skeletonFrameDataUrls.push({
           label: labels[i].label,
           sub: labels[i].sub,
@@ -1304,6 +1325,7 @@ async function extractEarlyFrames() {
     const urls = [];
     frames.forEach((f, i) => {
       if (f) {
+        applyBlueFilter(f);
         urls.push({
           label: labels[i].label,
           sub: labels[i].sub,
