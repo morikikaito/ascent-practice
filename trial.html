@@ -1436,12 +1436,32 @@ async function startDiagnosis(specs) {
 // PHASE 4: QUESTIONS
 // ============================================================
 function buildFrameGallery(destId, wrapperId, toggleId, iconId) {
-  const dest = document.getElementById(destId);
-  const wrapper = document.getElementById(wrapperId);
-  if (!dest || !wrapper || skeletonFrameDataUrls.length === 0) return;
+  if (skeletonFrameDataUrls.length === 0) return;
+
+  var wrapper = document.getElementById(wrapperId);
+  if (!wrapper) {
+    var phaseEl = document.getElementById(destId === 'question-frames-images' ? 'phase-question' : 'phase-result');
+    if (!phaseEl) return;
+    var imgTag = phaseEl.querySelector('img');
+    wrapper = document.createElement('div');
+    wrapper.id = wrapperId;
+    wrapper.style.cssText = 'display:none;margin-bottom:16px;';
+    wrapper.innerHTML = '<div id="'+toggleId+'" style="cursor:pointer;padding:10px 16px;background:#13131F;border:1px solid rgba(201,168,76,0.25);border-radius:10px;display:flex;justify-content:space-between;align-items:center;">'
+      + '<span style="font-family:Cinzel,serif;font-size:10px;letter-spacing:0.2em;color:#C9A84C;">YOUR SHOOTING FORM</span>'
+      + '<span id="'+iconId+'" style="font-size:12px;color:rgba(245,240,232,0.55);transition:transform 0.3s;">&#x25BC;</span></div>'
+      + '<div id="'+destId+'" style="max-height:2000px;overflow:hidden;transition:max-height 0.4s ease;margin-top:8px;"></div>';
+    if (imgTag && imgTag.nextSibling) {
+      phaseEl.insertBefore(wrapper, imgTag.nextSibling);
+    } else {
+      phaseEl.insertBefore(wrapper, phaseEl.firstChild);
+    }
+  }
+
+  var dest = document.getElementById(destId);
+  if (!dest) return;
   dest.innerHTML = '';
-  skeletonFrameDataUrls.forEach(f => {
-    const div = document.createElement('div');
+  skeletonFrameDataUrls.forEach(function(f) {
+    var div = document.createElement('div');
     div.style.cssText = 'margin-bottom:8px;border:1px solid rgba(201,168,76,'+(f.hasYellow?'0.6':'0.15')+');border-radius:10px;overflow:hidden;';
     div.innerHTML = '<div style="padding:6px 10px;font-family:Cinzel,serif;font-size:9px;letter-spacing:0.15em;color:'+(f.hasYellow?'#C9A84C':'rgba(245,240,232,0.4)')+';display:flex;justify-content:space-between;"><span>'+f.label+'</span><span>'+f.sub+'</span></div>'
       + '<img src="'+f.src+'" style="width:100%;display:block;">';
@@ -1449,21 +1469,23 @@ function buildFrameGallery(destId, wrapperId, toggleId, iconId) {
   });
   wrapper.style.display = 'block';
   dest.style.maxHeight = '2000px';
-  document.getElementById(iconId).style.transform = 'rotate(180deg)';
-  let scrollHint = wrapper.querySelector('.scroll-hint');
-  if (!scrollHint) {
-    scrollHint = document.createElement('div');
-    scrollHint.className = 'scroll-hint';
-    scrollHint.style.cssText = 'text-align:center;padding:12px 0 4px;font-size:12px;color:#C9A84C;animation:bounce 1.5s infinite;';
-    scrollHint.innerHTML = '↓ 下にスクロールして質問に回答 ↓';
-    wrapper.appendChild(scrollHint);
+  var icon = document.getElementById(iconId);
+  if (icon) icon.style.transform = 'rotate(180deg)';
+
+  if (!wrapper.querySelector('.scroll-hint')) {
+    var hint = document.createElement('div');
+    hint.className = 'scroll-hint';
+    hint.style.cssText = 'text-align:center;padding:12px 0 4px;font-size:12px;color:#C9A84C;animation:bounce 1.5s infinite;';
+    hint.innerHTML = '↓ 下にスクロールして質問に回答 ↓';
+    wrapper.appendChild(hint);
   }
-  const toggle = document.getElementById(toggleId);
+
+  var toggle = document.getElementById(toggleId);
   if (toggle) {
     toggle.onclick = function() {
-      const expanded = dest.style.maxHeight !== '0px';
+      var expanded = dest.style.maxHeight !== '0px';
       dest.style.maxHeight = expanded ? '0px' : '2000px';
-      document.getElementById(iconId).style.transform = expanded ? 'rotate(0deg)' : 'rotate(180deg)';
+      if (icon) icon.style.transform = expanded ? 'rotate(0deg)' : 'rotate(180deg)';
     };
   }
 }
