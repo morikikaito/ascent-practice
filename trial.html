@@ -204,6 +204,10 @@ input[type="file"] {
   animation: spin 0.8s linear infinite;
   margin: 24px auto;
 }
+@keyframes bounce {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(6px); }
+}
 @keyframes spin {
   to { transform: rotate(360deg); }
 }
@@ -1318,6 +1322,14 @@ function buildFrameGallery(destId, wrapperId, toggleId, iconId) {
   wrapper.style.display = 'block';
   dest.style.maxHeight = '2000px';
   document.getElementById(iconId).style.transform = 'rotate(180deg)';
+  let scrollHint = wrapper.querySelector('.scroll-hint');
+  if (!scrollHint) {
+    scrollHint = document.createElement('div');
+    scrollHint.className = 'scroll-hint';
+    scrollHint.style.cssText = 'text-align:center;padding:12px 0 4px;font-size:12px;color:#C9A84C;animation:bounce 1.5s infinite;';
+    scrollHint.innerHTML = '↓ 下にスクロールして質問に回答 ↓';
+    wrapper.appendChild(scrollHint);
+  }
   const toggle = document.getElementById(toggleId);
   if (toggle) {
     toggle.onclick = function() {
