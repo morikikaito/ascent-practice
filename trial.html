@@ -458,6 +458,13 @@ AIがシュートフォームの分析を開始しました。
 <!-- PHASE 4: Questions -->
 <div id="phase-question" class="phase">
   <img src="images/kait.png" alt="ASCENT" style="width:240px;max-width:80%;margin:0 auto 32px;display:block;">
+  <div id="question-frames" style="display:none;margin-bottom:16px;">
+    <div id="question-frames-toggle" style="cursor:pointer;padding:10px 16px;background:#13131F;border:1px solid rgba(201,168,76,0.25);border-radius:10px;display:flex;justify-content:space-between;align-items:center;">
+      <span style="font-family:Cinzel,serif;font-size:10px;letter-spacing:0.2em;color:#C9A84C;">YOUR SHOOTING FORM</span>
+      <span id="frames-toggle-icon" style="font-size:12px;color:rgba(245,240,232,0.55);transition:transform 0.3s;">&#x25BC;</span>
+    </div>
+    <div id="question-frames-images" style="max-height:2000px;overflow:hidden;transition:max-height 0.4s ease;margin-top:8px;"></div>
+  </div>
   <div class="card">
     <div id="question-text" style="line-height:1.9;font-size:0.93rem;margin-bottom:20px;white-space:pre-wrap;"></div>
     <div id="choices-container"></div>
@@ -473,6 +480,13 @@ AIがシュートフォームの分析を開始しました。
 <div id="phase-result" class="phase">
   <img src="images/kait.png" alt="ASCENT" style="width:240px;max-width:80%;margin:0 auto 32px;display:block;">
   <div class="card">
+  <div id="result-frames" style="display:none;margin-bottom:16px;">
+    <div id="result-frames-toggle" style="cursor:pointer;padding:10px 16px;background:#13131F;border:1px solid rgba(201,168,76,0.25);border-radius:10px;display:flex;justify-content:space-between;align-items:center;">
+      <span style="font-family:Cinzel,serif;font-size:10px;letter-spacing:0.2em;color:#C9A84C;">YOUR SHOOTING FORM</span>
+      <span id="result-toggle-icon" style="font-size:12px;color:rgba(245,240,232,0.55);transition:transform 0.3s;">&#x25BC;</span>
+    </div>
+    <div id="result-frames-images" style="max-height:2000px;overflow:hidden;transition:max-height 0.4s ease;margin-top:8px;"></div>
+  </div>
     <div id="result-content" class="result-block"></div>
   </div>
   <div class="locked-card">
