@@ -3,7 +3,7 @@
    オフライン対応 + キャッシュ戦略
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
 
-const CACHE_NAME = 'ascent-practice-v2';
+const CACHE_NAME = 'ascent-practice-v5';
 const ASSETS_TO_CACHE = [
   '/',
   '/index.html',
