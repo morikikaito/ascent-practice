@@ -306,14 +306,20 @@ input[type="file"] {
   white-space: pre-line;
 }
 
-/* Video preview */
-.video-preview {
+/* Video / image preview */
+.video-preview, .image-preview {
   width: 100%;
   border-radius: var(--radius-sm);
   margin-top: 12px;
-  max-height: 240px;
+  max-height: 280px;
   object-fit: contain;
   background: #000;
+}
+.skeleton-frame-img {
+  width: 100%;
+  height: auto;
+  display: block;
+  -webkit-touch-callout: none;
 }
 
 /* Already diagnosed */
@@ -379,20 +385,21 @@ UNLEASHプランをご検討ください👇</div>
 <div id="phase-upload" class="phase">
   <img src="https://practice.stepbystep-ascent.com/images/kait.png" alt="ASCENT" style="width:240px;max-width:80%;margin:0 auto 32px;display:block;">
   <div class="card">
-    <h2 style="font-size:1.1rem;margin-bottom:16px;text-align:center;">シュート動画をアップロード</h2>
+    <h2 style="font-size:1.1rem;margin-bottom:16px;text-align:center;">シュート動画・写真をアップロード</h2>
     <div id="upload-area" class="upload-area">
       <div class="icon">🎥</div>
       <p>タップして動画を選択<br>またはここにドラッグ＆ドロップ</p>
       <div id="file-name" class="filename"></div>
     </div>
-    <input type="file" id="file-input" accept="video/*">
-    <video id="video-preview" class="video-preview" style="display:none" controls></video>
+    <input type="file" id="file-input" accept="video/*,image/*">
+    <video id="video-preview" class="video-preview" style="display:none" controls playsinline webkit-playsinline></video>
+    <img id="image-preview" class="image-preview" style="display:none" alt="プレビュー">
     <div id="upload-error" class="error-msg" style="display:none"></div>
     <div id="upload-spinner" style="display:none;text-align:center;margin-top:20px;">
       <div class="spinner"></div>
-      <p style="color:var(--text-muted);font-size:0.85rem;">動画を検証中<span class="dots"></span></p>
+      <p id="upload-spinner-label" style="color:var(--text-muted);font-size:0.85rem;">読み込み中<span class="dots"></span></p>
     </div>
-    <button id="btn-upload" class="btn-gold" style="margin-top:20px;display:none;" disabled>動画を送信する</button>
+    <button id="btn-upload" class="btn-gold" style="margin-top:20px;display:none;" disabled>骨格解析を開始する</button>
   </div>
 </div>
 
@@ -603,6 +610,47 @@ function calcAngle(a, b, c) {
   return Math.round(Math.acos(Math.max(-1, Math.min(1, dot/mag))) * 180 / Math.PI);
 }
 
+function cloneCanvas(src) {
+  const out = document.createElement('canvas');
+  out.width = src.width;
+  out.height = src.height;
+  out.getContext('2d').drawImage(src, 0, 0);
+  return out;
+}
+
+async function loadImageFileToCanvas(file) {
+  return new Promise(function (resolve) {
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = function () {
+      const maxW = 1280;
+      var w = img.naturalWidth;
+      var h = img.naturalHeight;
+      if (!w || !h) {
+        URL.revokeObjectURL(url);
+        resolve(null);
+        return;
+      }
+      if (w > maxW) {
+        h = Math.round(h * maxW / w);
+        w = maxW;
+      }
+      var canvas = document.createElement('canvas');
+      canvas.width = w;
+      canvas.height = h;
+      canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+      URL.revokeObjectURL(url);
+      resolve(canvas);
+    };
+    img.onerror = function () {
+      URL.revokeObjectURL(url);
+      resolve(null);
+    };
+    img.src = url;
+  });
+}
+
 function analyzeFrame(landmarks, phaseName) {
   if (!landmarks || !landmarks.length) return { phase: phaseName, yellowJoints: [], landmarks: [] };
   const lm = landmarks[0];
@@ -666,20 +714,13 @@ function renderFormOverlay(srcCanvas, landmarks, yellowJoints, redJoints) {
   const ctx = out.getContext('2d');
   ctx.drawImage(srcCanvas, 0, 0);
   applyBlueFilter(out);
-  const W = out.width, H = out.height;
-
-  ctx.font = 'bold ' + Math.max(14, W * 0.035) + 'px sans-serif';
-  ctx.fillStyle = '#00FF00';
-  ctx.fillText('v5 | lm=' + (landmarks ? landmarks.length : 'null') + ' | lm0=' + (landmarks && landmarks[0] ? landmarks[0].length : 'null'), 10, 30);
-  ctx.fillText('y=' + (yellowJoints||[]).length + ' r=' + (redJoints||[]).length, 10, 55);
+  const W = out.width;
+  const H = out.height;
 
   if (!landmarks || !landmarks.length) return out;
   const lm = landmarks[0];
-  if (!lm || !lm.length) {
-    ctx.fillText('lm[0] empty!', 10, 80);
-    return out;
-  }
-  ctx.fillText('lm[0].len=' + lm.length + ' | lm[11]=' + (lm[11] ? lm[11].x.toFixed(2)+','+lm[11].y.toFixed(2) : 'null'), 10, 80);
+  if (!lm || !lm.length) return out;
+
   const reds = new Set(redJoints || []);
   const yellows = new Set(yellowJoints || []);
 
@@ -687,45 +728,51 @@ function renderFormOverlay(srcCanvas, landmarks, yellowJoints, redJoints) {
     [11,12],[11,13],[13,15],[12,14],[14,16],
     [11,23],[12,24],[23,24],[23,25],[24,26],[25,27],[26,28]
   ];
-  const lw = Math.max(3, W * 0.006);
+  var lw = Math.max(2, Math.min(5, W * 0.005));
   ctx.lineWidth = lw;
-  for (const [i,j] of connections) {
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+  ctx.strokeStyle = 'rgba(255,255,255,0.92)';
+  ctx.shadowBlur = 0;
+  for (var ci = 0; ci < connections.length; ci++) {
+    var pair = connections[ci];
+    var i = pair[0];
+    var j = pair[1];
     if (!lm[i] || !lm[j]) continue;
-    const ni = MP_IDX_TO_NAME[i], nj = MP_IDX_TO_NAME[j];
-    const isRed = reds.has(ni) || reds.has(nj);
-    const isYellow = yellows.has(ni) || yellows.has(nj);
-    const status = isRed ? 'error' : isYellow ? 'warning' : 'good';
-    const c = getJointColor(status);
-    ctx.strokeStyle = c.fill;
-    ctx.shadowColor = c.shadow;
-    ctx.shadowBlur = c.glow;
     ctx.beginPath();
-    ctx.moveTo(lm[i].x*W, lm[i].y*H);
-    ctx.lineTo(lm[j].x*W, lm[j].y*H);
+    ctx.moveTo(lm[i].x * W, lm[i].y * H);
+    ctx.lineTo(lm[j].x * W, lm[j].y * H);
     ctx.stroke();
   }
-  ctx.shadowBlur = 0;
 
-  const r = Math.max(5, W * 0.012);
-  for (const idx of Object.values(MP_IDX)) {
-    const pt = lm[idx];
+  var r = Math.max(4, W * 0.011);
+  var idxList = Object.values(MP_IDX);
+  for (var k = 0; k < idxList.length; k++) {
+    var idx = idxList[k];
+    var pt = lm[idx];
     if (!pt) continue;
-    const name = MP_IDX_TO_NAME[idx];
-    const status = reds.has(name) ? 'error' : yellows.has(name) ? 'warning' : 'good';
-    const c = getJointColor(status);
-
-    if (status !== 'good') {
-      ctx.fillStyle = status === 'error' ? 'rgba(255,68,68,0.2)' : 'rgba(255,215,0,0.15)';
+    var name = MP_IDX_TO_NAME[idx];
+    var isErr = reds.has(name);
+    var isWarn = yellows.has(name);
+    if (isErr) {
+      ctx.strokeStyle = 'rgba(255,68,68,0.9)';
+      ctx.lineWidth = 3;
       ctx.beginPath();
-      ctx.arc(pt.x*W, pt.y*H, r*2.8, 0, 2*Math.PI);
-      ctx.fill();
+      ctx.arc(pt.x * W, pt.y * H, r * 2.2, 0, 2 * Math.PI);
+      ctx.stroke();
+    } else if (isWarn) {
+      ctx.strokeStyle = 'rgba(255,215,0,0.95)';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(pt.x * W, pt.y * H, r * 2, 0, 2 * Math.PI);
+      ctx.stroke();
     }
-    ctx.fillStyle = c.fill;
-    ctx.beginPath();
-    ctx.arc(pt.x*W, pt.y*H, r*(status!=='good'?1.6:1), 0, 2*Math.PI);
-    ctx.fill();
-    ctx.strokeStyle = c.stroke;
+    ctx.fillStyle = '#E53935';
+    ctx.strokeStyle = '#B71C1C';
     ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(pt.x * W, pt.y * H, r, 0, 2 * Math.PI);
+    ctx.fill();
     ctx.stroke();
   }
   return out;
@@ -756,7 +803,7 @@ function displayMPResults(canvases, metrics) {
       +'<span>'+p.label+'</span><span style="display:flex;align-items:center;font-size:10px;">'+badges+'</span></div>';
     if (p.canvas) {
       const dataUrl = p.canvas.toDataURL('image/jpeg',0.85);
-      html += '<img src="'+dataUrl+'" style="width:100%;display:block;">';
+      html += '<img src="'+dataUrl+'" class="skeleton-frame-img" alt="骨格解析">';
       skeletonFrameDataUrls.push({ label: p.label, sub: p.sub, src: dataUrl, hasIssues: hasRed||hasYellow, errorCount: p.m?.redJoints?.length||0, warnCount: p.m?.yellowJoints?.length||0, landmarks: [] });
     }
     if (hasRed && p.m) {
@@ -992,11 +1039,69 @@ async function runMediaPipeAnalysis() {
   const fallbackRatios = [0.20, 0.50, 0.80];
 
   try {
+    if (mediaKind === 'image') {
+      progressEl.style.width = '15%';
+      statusEl.textContent = '写真を読み込み中...';
+      var photoCanvas = await loadImageFileToCanvas(mediaFile);
+      if (!photoCanvas) {
+        showPhase('phase-upload');
+        showUploadError('画像を読み取れませんでした。\nJPEG / PNG など別の写真で試してください。');
+        return;
+      }
+      progressEl.style.width = '30%';
+      statusEl.textContent = 'MediaPipeを初期化しています...';
+      var imgLandmarker = await initMediaPipe();
+      if (imgLandmarker) {
+        progressEl.style.width = '55%';
+        statusEl.textContent�の座標を計算しています...';
+        var imgDet;
+        try {
+          imgDet = imgLandmarker.detect(photoCanvas);
+        } catch (imgE) {
+          console.warn('detect failed:', imgE);
+          imgDet = { landmarks: [] };
+        }
+        var imgLm = imgDet && imgDet.landmarks && imgDet.landmarks[0] && imgDet.landmarks[0].length > 5;
+        if (imgLm) {
+          progressEl.style.width = '80%';
+          var imgMetrics = [
+            analyzeFrame(imgDet.landmarks, 'dip'),
+            analyzeFrame(imgDet.landmarks, 'setup'),
+            analyzeFrame(imgDet.landmarks, 'release')
+          ];
+          mediapipeResults = { dip: imgMetrics[0], setup: imgMetrics[1], release: imgMetrics[2] };
+          statusEl.textContent = 'フォーム分析を描画中...(静止画・同一姿勢を3観点で評価)';
+          var imgOverlays = imgMetrics.map(function (m) {
+            return renderFormOverlay(photoCanvas, imgDet.landmarks, m.yellowJoints, m.redJoints);
+          });
+          progressEl.style.width = '100%';
+          frameImages = [photoCanvas, photoCanvas, photoCanvas].map(function (c) {
+            return c.toDataURL('image/jpeg', 0.7).split(',')[1];
+          });
+          displayMPResults(imgOverlays, imgMetrics);
+          return;
+        }
+        statusEl.textContent = 'MediaPipeで検出できず → サーバー解析...';
+        var imgFrames = [photoCanvas, cloneCanvas(photoCanvas), cloneCanvas(photoCanvas)];
+        var imgServerOk = await serverPoseDetection(imgFrames, statusEl, progressEl);
+        if (!imgServerOk) {
+          await extractFallbackFrames();
+        }
+        proceedToSpec();
+        return;
+      }
+      statusEl.textContent = 'MediaPipe初期化失敗 → サーバー解析...';
+      var imgFrames2 = [photoCanvas, cloneCanvas(photoCanvas), cloneCanvas(photoCanvas)];
+      await serverPoseDetection(imgFrames2, statusEl, progressEl);
+      proceedToSpec();
+      return;
+    }
+
     statusEl.textContent = 'フレームを抽出中...';
     progressEl.style.width = '20%';
-    let frames = await Promise.all(ratios.map(r => extractFrameAtTime(videoFile, r)));
+    let frames = await Promise.all(ratios.map(r => extractFrameAtTime(mediaFile, r)));
     for (let i = 0; i < frames.length; i++) {
-      if (!frames[i]) frames[i] = await extractFrameAtTime(videoFile, fallbackRatios[i]);
+      if (!frames[i]) frames[i] = await extractFrameAtTime(mediaFile, fallbackRatios[i]);
     }
     const validFrames = frames.filter(f => f !== null).length;
     if (validFrames === 0) {
@@ -1067,7 +1172,23 @@ async function extractFallbackFrames() {
       { label: 'PHASE B — SETUP', sub: 'セットアップ（構え）' },
       { label: 'PHASE C — RELEASE', sub: 'リリース（フォロースルー）' }
     ];
-    const frames = await Promise.all(ratios.map(r => extractFrameAtTime(videoFile, r)));
+    if (mediaKind === 'image') {
+      var ic = await loadImageFileToCanvas(mediaFile);
+      if (!ic) return;
+      skeletonFrameDataUrls = [];
+      for (var ii = 0; ii < labels.length; ii++) {
+        var icopy = cloneCanvas(ic);
+        applyBlueFilter(icopy);
+        skeletonFrameDataUrls.push({
+          label: labels[ii].label,
+          sub: labels[ii].sub,
+          src: icopy.toDataURL('image/jpeg', 0.85),
+          hasYellow: false
+        });
+      }
+      return;
+    }
+    const frames = await Promise.all(ratios.map(r => extractFrameAtTime(mediaFile, r)));
     skeletonFrameDataUrls = [];
     frames.forEach((f, i) => {
       if (f) {
@@ -1200,7 +1321,8 @@ const VALIDATION_PROMPT = `以下の動画を確認してください。この�
 // ============================================================
 // STATE
 // ============================================================
-let videoFile = null;
+let mediaFile = null;
+let mediaKind = 'video';
 let videoBase64 = null;
 let videoMimeType = null;
 let conversationHistory = [];
@@ -1400,24 +1522,47 @@ function initUpload() {
 }
 
 function handleFile(file) {
-  if (!file.type.startsWith('video/')) {
-    showUploadError('動画ファイルを選択してください。');
+  hideUploadError();
+  var vidEl = document.getElementById('video-preview');
+  var imgEl = document.getElementById('image-preview');
+  if (vidEl.src && vidEl.src.indexOf('blob:') === 0) {
+    try { URL.revokeObjectURL(vidEl.src); } catch (eRev) {}
+  }
+  if (imgEl.src && imgEl.src.indexOf('blob:') === 0) {
+    try { URL.revokeObjectURL(imgEl.src); } catch (eRev2) {}
+  }
+  vidEl.style.display = 'none';
+  imgEl.style.display = 'none';
+
+  if (file.type.startsWith('video/')) {
+    mediaKind = 'video';
+    var maxVidMb = 80;
+    if (file.size > maxVidMb * 1024 * 1024) {
+      var sizeMBv = Math.round(file.size / 1024 / 1024);
+      showUploadError('動画のファイルサイズが大きすぎます（' + sizeMBv + 'MB）。\n30秒以内の短い動画で撮り直してみてください📱');
+      return;
+    }
+    mediaFile = file;
+    videoMimeType = file.type;
+    vidEl.src = URL.createObjectURL(file);
+    vidEl.style.display = 'block';
+  } else if (file.type.startsWith('image/')) {
+    mediaKind = 'image';
+    var maxImgMb = 25;
+    if (file.size > maxImgMb * 1024 * 1024) {
+      showUploadError('画像のファイルサイズが大きすぎます（最大25MB）。\n別の写真で試してください。');
+      return;
+    }
+    mediaFile = file;
+    videoMimeType = file.type;
+    imgEl.src = URL.createObjectURL(file);
+    imgEl.style.display = 'block';
+  } else {
+    showUploadError('動画または画像ファイルを選択してください。');
     return;
   }
-  const maxMB = 80;
-  if (file.size > maxMB * 1024 * 1024) {
-    const sizeMB = Math.round(file.size / 1024 / 1024);
-    showUploadError('動画のファイルサイズが大きすぎます（' + sizeMB + 'MB）。\n30秒以内の短い動画で撮り直してみてください📱');
-    return;
-  }
-  videoFile = file;
-  videoMimeType = file.type;
 
   document.getElementById('file-name').textContent = file.name;
-  const preview = document.getElementById('video-preview');
-  preview.src = URL.createObjectURL(file);
-  preview.style.display = 'block';
-
   document.getElementById('btn-upload').style.display = 'block';
   document.getElementById('btn-upload').disabled = false;
   hideUploadError();
@@ -1436,18 +1581,23 @@ async function validateVideo() {
   const btn = document.getElementById('btn-upload');
   btn.disabled = true;
   document.getElementById('upload-spinner').style.display = 'block';
+  var spinLab = document.getElementById('upload-spinner-label');
+  if (spinLab) {
+    var lab = mediaKind === 'image' ? '画像を読み込み中' : '動画を読み込み中';
+    spinLab.innerHTML = lab + '<span class="dots"></span>';
+  }
   hideUploadError();
 
   try {
     const [base64Result] = await Promise.all([
-      fileToBase64(videoFile),
+      fileToBase64(mediaFile),
       extractEarlyFrames()
     ]);
     videoBase64 = base64Result;
     runMediaPipeAnalysis();
   } catch (e) {
     console.error(e);
-    showUploadError('動画の読み込みに失敗しました。\n別の動画で試してみてください📱');
+    showUploadError('ファイルの読み込みに失敗しました。\n別の動画・写真で試してみてください。');
     btn.disabled = false;
   } finally {
     document.getElementById('upload-spinner').style.display = 'none';
@@ -1462,7 +1612,23 @@ async function extractEarlyFrames() {
     { label: 'PHASE C — RELEASE', sub: 'リリース（フォロースルー）' }
   ];
   try {
-    const frames = await Promise.all(ratios.map(r => extractFrameAtTime(videoFile, r)));
+    if (mediaKind === 'image') {
+      var earlyImg = await loadImageFileToCanvas(mediaFile);
+      if (!earlyImg) return;
+      skeletonFrameDataUrls = [];
+      for (var ei = 0; ei < labels.length; ei++) {
+        var ec = cloneCanvas(earlyImg);
+        applyBlueFilter(ec);
+        skeletonFrameDataUrls.push({
+          label: labels[ei].label,
+          sub: labels[ei].sub,
+          src: ec.toDataURL('image/jpeg', 0.85),
+          hasYellow: false
+        });
+      }
+      return;
+    }
+    const frames = await Promise.all(ratios.map(r => extractFrameAtTime(mediaFile, r)));
     const urls = [];
     frames.forEach((f, i) => {
       if (f) {
