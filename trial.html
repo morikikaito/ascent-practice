@@ -873,7 +873,25 @@ async function serverPoseDetection(canvasFrames, statusEl, progressEl) {
 
     frameImages = canvasFrames.map(f => f ? f.toDataURL('image/jpeg', 0.7).split(',')[1] : null);
     progressEl.style.width = '100%';
-    statusEl.textContent = '骨格解析完了！ (' + drawnCount + 'フレーム)';
+
+    var totalLm = skeletonFrameDataUrls.reduce(function(s, f){ return s + (f.landmarks||[]).length; }, 0);
+    var totalErr = skeletonFrameDataUrls.reduce(function(s, f){ return s + (f.errorCount||0); }, 0);
+    var totalWarn = skeletonFrameDataUrls.reduce(function(s, f){ return s + (f.warnCount||0); }, 0);
+    statusEl.textContent = '骨格解析完了！ ' + drawnCount + 'フレーム / ' + totalLm + '関節検出 / 🔴' + totalErr + ' 🟡' + totalWarn;
+
+    var dbgEl = document.getElementById('pose-debug');
+    if (!dbgEl) {
+      dbgEl = document.createElement('div');
+      dbgEl.id = 'pose-debug';
+      dbgEl.style.cssText = 'margin:8px 0;padding:8px;background:rgba(0,0,0,0.7);border:1px solid #444;border-radius:6px;font-size:10px;color:#aaa;word-break:break-all;max-height:120px;overflow-y:auto;';
+      statusEl.parentElement.appendChild(dbgEl);
+    }
+    dbgEl.innerHTML = '<b style="color:#fff;">Debug:</b> frames=' + (data.frames||[]).length
+      + ' | f0_landmarks=' + ((data.frames&&data.frames[0])?data.frames[0].landmarks.length:'N/A')
+      + ' | sample=' + (data._debug?.sampleLandmark ? JSON.stringify(data._debug.sampleLandmark) : 'none')
+      + ' | status_counts=' + JSON.stringify(data._debug?.statusCounts||{})
+      + '<br><b style="color:#fff;">Raw preview:</b> ' + (data._debug?.rawTextPreview||'').substring(0,150);
+
     return true;
   } catch (e) {
     console.error('Server pose detection failed:', e);
