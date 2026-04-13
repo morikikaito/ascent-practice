@@ -816,7 +816,7 @@ async function serverPoseDetection(canvasFrames, statusEl, progressEl) {
   const base64Frames = validCanvases.map(f => f.toDataURL('image/jpeg', 0.6).split(',')[1]);
 
   try {
-    statusEl.textContent = 'AI骨格解析中...（画像送信中）';
+    statusEl.textContent = 'AI骨格解析中...（画像送信中）[v3]';
     progressEl.style.width = '50%';
 
     const res = await fetch(WORKER_BASE + '/detect-pose', {
@@ -896,6 +896,15 @@ async function serverPoseDetection(canvasFrames, statusEl, progressEl) {
   } catch (e) {
     console.error('Server pose detection failed:', e);
     statusEl.textContent = '骨格検出エラー: ' + e.message.substring(0, 80);
+
+    var dbgEl2 = document.getElementById('pose-debug');
+    if (!dbgEl2) {
+      dbgEl2 = document.createElement('div');
+      dbgEl2.id = 'pose-debug';
+      dbgEl2.style.cssText = 'margin:8px 0;padding:8px;background:rgba(255,0,0,0.2);border:1px solid #f44;border-radius:6px;font-size:10px;color:#faa;word-break:break-all;max-height:120px;overflow-y:auto;';
+      statusEl.parentElement.appendChild(dbgEl2);
+    }
+    dbgEl2.innerHTML = '<b style="color:#f44;">ERROR:</b> ' + e.message + '<br><b>Stack:</b> ' + (e.stack||'').substring(0,200);
 
     skeletonFrameDataUrls = [];
     canvasFrames.forEach((canvas, i) => {
