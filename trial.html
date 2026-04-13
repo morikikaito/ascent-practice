@@ -1073,43 +1073,53 @@ async function validateVideo() {
   try {
     videoBase64 = await fileToBase64(videoFile);
 
-    const body = {
-      contents: [{
-        parts: [
-          { inline_data: { mime_type: videoMimeType, data: videoBase64 } },
-          { text: VALIDATION_PROMPT }
-        ]
-      }]
-    };
+    let validated = true;
+    try {
+      const body = {
+        contents: [{
+          parts: [
+            { inline_data: { mime_type: videoMimeType, data: videoBase64 } },
+            { text: VALIDATION_PROMPT }
+          ]
+        }]
+      };
 
-    const res = await fetch(GEMINI_ENDPOINT, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body)
-    });
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 15000);
+      const res = await fetch(GEMINI_ENDPOINT, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+        signal: controller.signal
+      });
+      clearTimeout(timeout);
 
-    if (!res.ok) {
-      const errData = await res.json().catch(() => ({}));
-      console.error('Gemini validation error:', res.status, errData);
-      if (res.status === 400) throw new Error('file_too_large');
-      throw new Error('API error ' + res.status);
+      if (!res.ok) {
+        if (res.status === 400) throw new Error('file_too_large');
+        console.warn('Validation API error:', res.status, '- skipping validation');
+      } else {
+        const data = await res.json();
+        const answer = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim().toUpperCase() || '';
+        if (!answer.includes('YES')) validated = false;
+      }
+    } catch (valErr) {
+      if (valErr.message === 'file_too_large') {
+        showUploadError('動画のサイズを確認してください');
+        btn.disabled = false;
+        return;
+      }
+      console.warn('Validation skipped due to error:', valErr.message);
     }
 
-    const data = await res.json();
-    const answer = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim().toUpperCase() || '';
-
-    if (answer.includes('YES')) {
+    if (validated) {
       runMediaPipeAnalysis();
     } else {
-      showUploadError('動画のサイズを確認してください');
+      showUploadError('バスケットボールのシュート動画をアップロードしてください');
       btn.disabled = false;
     }
   } catch (e) {
     console.error(e);
-    const msg = (e.message === 'file_too_large')
-      ? '動画のサイズを確認してください'
-      : 'ごめんなさい！🙇‍♂️現在、AIの分析サーバーが混み合っており、一時的にストップしました💦\n5〜10分ほど時間を置いてから、もう一度やり直してみてください！🙏';
-    showUploadError(msg);
+    showUploadError('エラーが発生しました: ' + e.message.substring(0, 60));
     btn.disabled = false;
   } finally {
     document.getElementById('upload-spinner').style.display = 'none';
