@@ -831,10 +831,16 @@ async function serverPoseDetection(canvasFrames, statusEl, progressEl) {
     }
 
     const data = await res.json();
-    console.log('[detect-pose] Response:', JSON.stringify(data._debug || {}));
+    console.log('[detect-pose] Full response keys:', Object.keys(data));
+    console.log('[detect-pose] Debug:', JSON.stringify(data._debug || {}));
+    console.log('[detect-pose] Frames count:', (data.frames || []).length);
+    if (data.frames && data.frames[0]) {
+      console.log('[detect-pose] Frame0 landmarks:', (data.frames[0].landmarks || []).length);
+      console.log('[detect-pose] Frame0 sample:', JSON.stringify((data.frames[0].landmarks || [])[0]));
+    }
     if (data.error) throw new Error(data.error);
 
-    statusEl.textContent = '骨格線を描画中...';
+    statusEl.textContent = '骨格線を描画中... (frames:' + (data.frames||[]).length + ')';
     progressEl.style.width = '80%';
 
     skeletonFrameDataUrls = [];
@@ -843,10 +849,7 @@ async function serverPoseDetection(canvasFrames, statusEl, progressEl) {
       if (!canvas) return;
       const frameData = data.frames?.[drawnCount];
       const frameLandmarks = frameData?.landmarks || [];
-      console.log('[detect-pose] Frame ' + i + ': ' + frameLandmarks.length + ' landmarks');
-      if (frameLandmarks.length > 0) {
-        console.log('[detect-pose] Sample:', JSON.stringify(frameLandmarks[0]));
-      }
+      console.log('[detect-pose] Frame ' + i + ': ' + frameLandmarks.length + ' landmarks, keys:', frameLandmarks.length > 0 ? Object.keys(frameLandmarks[0]) : 'none');
       drawnCount++;
 
       const hasIssues = frameLandmarks.some(lm => lm.s === 'warning' || lm.s === 'error');
@@ -883,7 +886,10 @@ async function serverPoseDetection(canvasFrames, statusEl, progressEl) {
         label: labels[i].label,
         sub: labels[i].sub,
         src: canvas.toDataURL('image/jpeg', 0.85),
-        hasYellow: false
+        hasIssues: false,
+        errorCount: 0,
+        warnCount: 0,
+        landmarks: []
       });
     });
     frameImages = canvasFrames.map(f => f ? f.toDataURL('image/jpeg', 0.7).split(',')[1] : null);
