@@ -620,18 +620,33 @@ function analyzeFrame(landmarks, phaseName) {
     ? Math.round(Math.abs(lm[HIP].y - lm[OPP_HIP].y) * 100) : null;
 
   const yellow = [];
-  if (phaseName === 'dip' && hipDiff !== null && hipDiff > 8) {
-    yellow.push(hand + '_HIP'); yellow.push(opp + '_HIP');
+  const red = [];
+
+  if (phaseName === 'dip') {
+    if (hipDiff !== null && hipDiff > 12) { red.push(hand + '_HIP'); red.push(opp + '_HIP'); }
+    else if (hipDiff !== null && hipDiff > 6) { yellow.push(hand + '_HIP'); yellow.push(opp + '_HIP'); }
+    if (elbowAngle !== null && elbowAngle > 140) { red.push(hand + '_ELBOW'); }
+    else if (elbowAngle !== null && elbowAngle > 110) { yellow.push(hand + '_ELBOW'); }
   }
-  if (phaseName === 'setup' && elbowAngle !== null && (elbowAngle < 65 || elbowAngle > 115)) {
-    yellow.push(hand + '_ELBOW');
+  if (phaseName === 'setup') {
+    if (elbowAngle !== null && (elbowAngle < 50 || elbowAngle > 130)) { red.push(hand + '_ELBOW'); }
+    else if (elbowAngle !== null && (elbowAngle < 65 || elbowAngle > 115)) { yellow.push(hand + '_ELBOW'); }
+    if (lm[SHOULDER] && lm[WRIST] && lm[ELBOW]) {
+      const elbowX = lm[ELBOW].x, shoulderX = lm[SHOULDER].x;
+      const flare = Math.abs(elbowX - shoulderX);
+      if (flare > 0.12) { red.push(hand + '_ELBOW'); red.push(hand + '_SHOULDER'); }
+      else if (flare > 0.07) { yellow.push(hand + '_SHOULDER'); }
+    }
   }
-  if (phaseName === 'release' && elbowAngle !== null && (elbowAngle < 135 || elbowAngle > 175)) {
-    yellow.push(hand + '_ELBOW');
-  }
-  if (phaseName === 'release' && lm[SHOULDER] && lm[WRIST]) {
-    const lift = lm[SHOULDER].y - lm[WRIST].y;
-    if (lift < 0.08) yellow.push(hand + '_WRIST');
+  if (phaseName === 'release') {
+    if (elbowAngle !== null && elbowAngle < 120) { red.push(hand + '_ELBOW'); }
+    else if (elbowAngle !== null && (elbowAngle < 135 || elbowAngle > 175)) { yellow.push(hand + '_ELBOW'); }
+    if (lm[SHOULDER] && lm[WRIST]) {
+      const lift = lm[SHOULDER].y - lm[WRIST].y;
+      if (lift < 0.02) { red.push(hand + '_WRIST'); }
+      else if (lift < 0.08) { yellow.push(hand + '_WRIST'); }
+    }
+    if (hipDiff !== null && hipDiff > 10) { yellow.push(hand + '_HIP'); yellow.push(opp + '_HIP'); }
   }
 
   return {
@@ -639,51 +654,68 @@ function analyzeFrame(landmarks, phaseName) {
     elbowAngle,
     hipDiff,
     yellowJoints: [...new Set(yellow)],
+    redJoints: [...new Set(red)],
     landmarks: lm.map(l => ({ x: l.x, y: l.y, z: l.z, visibility: l.visibility }))
   };
 }
 
-function renderYellowLight(srcCanvas, landmarks, yellowJoints) {
+function renderFormOverlay(srcCanvas, landmarks, yellowJoints, redJoints) {
   const out = document.createElement('canvas');
   out.width = srcCanvas.width;
   out.height = srcCanvas.height;
   const ctx = out.getContext('2d');
   ctx.drawImage(srcCanvas, 0, 0);
+  applyBlueFilter(out);
   if (!landmarks || !landmarks.length) return out;
   const lm = landmarks[0];
   const W = out.width, H = out.height;
+  const reds = new Set(redJoints || []);
+  const yellows = new Set(yellowJoints || []);
+
   const connections = [
     [11,12],[11,13],[13,15],[12,14],[14,16],
     [11,23],[12,24],[23,24],[23,25],[24,26],[25,27],[26,28]
   ];
-  const lw = Math.max(2, W * 0.004);
+  const lw = Math.max(3, W * 0.006);
   ctx.lineWidth = lw;
   for (const [i,j] of connections) {
     if (!lm[i] || !lm[j]) continue;
-    const yi = yellowJoints.includes(MP_IDX_TO_NAME[i]);
-    const yj = yellowJoints.includes(MP_IDX_TO_NAME[j]);
-    ctx.strokeStyle = (yi||yj) ? '#C9A84C' : 'rgba(245,240,232,0.55)';
+    const ni = MP_IDX_TO_NAME[i], nj = MP_IDX_TO_NAME[j];
+    const isRed = reds.has(ni) || reds.has(nj);
+    const isYellow = yellows.has(ni) || yellows.has(nj);
+    const status = isRed ? 'error' : isYellow ? 'warning' : 'good';
+    const c = getJointColor(status);
+    ctx.strokeStyle = c.fill;
+    ctx.shadowColor = c.shadow;
+    ctx.shadowBlur = c.glow;
     ctx.beginPath();
     ctx.moveTo(lm[i].x*W, lm[i].y*H);
     ctx.lineTo(lm[j].x*W, lm[j].y*H);
     ctx.stroke();
   }
+  ctx.shadowBlur = 0;
+
   const r = Math.max(5, W * 0.012);
   for (const idx of Object.values(MP_IDX)) {
     const pt = lm[idx];
     if (!pt) continue;
     const name = MP_IDX_TO_NAME[idx];
-    const isYellow = yellowJoints.includes(name);
-    if (isYellow) {
-      ctx.fillStyle = 'rgba(201,168,76,0.25)';
+    const status = reds.has(name) ? 'error' : yellows.has(name) ? 'warning' : 'good';
+    const c = getJointColor(status);
+
+    if (status !== 'good') {
+      ctx.fillStyle = status === 'error' ? 'rgba(255,68,68,0.2)' : 'rgba(255,215,0,0.15)';
       ctx.beginPath();
       ctx.arc(pt.x*W, pt.y*H, r*2.8, 0, 2*Math.PI);
       ctx.fill();
     }
-    ctx.fillStyle = isYellow ? '#C9A84C' : 'rgba(245,240,232,0.85)';
+    ctx.fillStyle = c.fill;
     ctx.beginPath();
-    ctx.arc(pt.x*W, pt.y*H, r*(isYellow?1.6:1), 0, 2*Math.PI);
+    ctx.arc(pt.x*W, pt.y*H, r*(status!=='good'?1.6:1), 0, 2*Math.PI);
     ctx.fill();
+    ctx.strokeStyle = c.stroke;
+    ctx.lineWidth = 2;
+    ctx.stroke();
   }
   return out;
 }
@@ -698,30 +730,44 @@ function displayMPResults(canvases, metrics) {
   framesEl.innerHTML = '';
   skeletonFrameDataUrls = [];
   for (const p of phases) {
-    const hasY = p.m?.yellowJoints?.length > 0;
+    const hasRed = p.m?.redJoints?.length > 0;
+    const hasYellow = p.m?.yellowJoints?.length > 0;
+    const borderColor = hasRed ? 'rgba(255,68,68,0.6)' : hasYellow ? 'rgba(255,215,0,0.5)' : 'var(--border)';
+    const headerColor = hasRed ? '#FF6666' : hasYellow ? 'var(--gold)' : 'var(--text-muted)';
+
+    var badges = '';
+    if (hasRed) badges += '<span style="background:#FF4444;color:#fff;padding:1px 6px;border-radius:8px;font-size:8px;margin-left:4px;">&#x26A0; ' + p.m.redJoints.length + '</span>';
+    if (hasYellow) badges += '<span style="background:#CC9900;color:#fff;padding:1px 6px;border-radius:8px;font-size:8px;margin-left:4px;">&#x25B2; ' + p.m.yellowJoints.length + '</span>';
+
     const el = document.createElement('div');
-    el.style.cssText = 'margin-bottom:14px;background:var(--bg-card);border:1px solid '+(hasY?'var(--gold)':'var(--border)')+';border-radius:12px;overflow:hidden;';
-    let html = '<div style="padding:10px 14px;font-family:Cinzel,serif;font-size:11px;letter-spacing:0.15em;color:'+(hasY?'var(--gold)':'var(--text-muted)')+';display:flex;justify-content:space-between;">'
-      +'<span>'+p.label+'</span><span style="font-size:10px;">'+p.sub+'</span></div>';
+    el.style.cssText = 'margin-bottom:14px;background:var(--bg-card);border:1px solid '+borderColor+';border-radius:12px;overflow:hidden;';
+    let html = '<div style="padding:10px 14px;font-family:Cinzel,serif;font-size:11px;letter-spacing:0.15em;color:'+headerColor+';display:flex;justify-content:space-between;align-items:center;">'
+      +'<span>'+p.label+'</span><span style="display:flex;align-items:center;font-size:10px;">'+badges+'</span></div>';
     if (p.canvas) {
       const dataUrl = p.canvas.toDataURL('image/jpeg',0.85);
       html += '<img src="'+dataUrl+'" style="width:100%;display:block;">';
-      skeletonFrameDataUrls.push({ label: p.label, sub: p.sub, src: dataUrl, hasYellow: hasY });
+      skeletonFrameDataUrls.push({ label: p.label, sub: p.sub, src: dataUrl, hasIssues: hasRed||hasYellow, errorCount: p.m?.redJoints?.length||0, warnCount: p.m?.yellowJoints?.length||0, landmarks: [] });
     }
-    if (hasY && p.m) {
+    if (hasRed && p.m) {
+      const names = p.m.redJoints.map(j => MP_JOINT_LABELS[j]||j).join('・');
+      html += '<div style="padding:8px 14px;background:rgba(255,68,68,0.1);border-top:1px solid rgba(255,68,68,0.3);font-size:11px;color:#FF6666;">🔴 要修正：'+names+'</div>';
+    }
+    if (hasYellow && p.m) {
       const names = p.m.yellowJoints.map(j => MP_JOINT_LABELS[j]||j).join('・');
-      html += '<div style="padding:10px 14px;background:rgba(201,168,76,0.08);border-top:1px solid var(--border);font-size:11px;color:var(--gold);">⚠️ 要注意箇所：'+names+'</div>';
+      html += '<div style="padding:8px 14px;background:rgba(201,168,76,0.08);border-top:1px solid var(--border);font-size:11px;color:var(--gold);">🟡 要注意：'+names+'</div>';
     }
     el.innerHTML = html;
     framesEl.appendChild(el);
   }
   const releaseM = metrics[2];
+  const totalRed = metrics.reduce((s, m) => s + (m?.redJoints?.length||0), 0);
   const totalYellow = metrics.reduce((s, m) => s + (m?.yellowJoints?.length||0), 0);
   document.getElementById('mp-metrics').innerHTML =
-    '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:16px;">'
-    +'<div style="background:var(--bg-card);border:1px solid var(--border);border-radius:8px;padding:12px;text-align:center;"><div style="font-family:\'Cormorant Garamond\',serif;font-size:24px;font-weight:700;color:var(--gold);">'+(releaseM?.elbowAngle ?? '--')+'°</div><div style="font-size:9px;color:var(--text-muted);margin-top:4px;">リリース角度</div></div>'
-    +'<div style="background:var(--bg-card);border:1px solid var(--border);border-radius:8px;padding:12px;text-align:center;"><div style="font-family:\'Cormorant Garamond\',serif;font-size:24px;font-weight:700;color:var(--gold);">'+(metrics[0]?.hipDiff ?? '--')+'</div><div style="font-size:9px;color:var(--text-muted);margin-top:4px;">骨盤スコア</div></div>'
-    +'<div style="background:var(--bg-card);border:1px solid var(--border);border-radius:8px;padding:12px;text-align:center;"><div style="font-family:\'Cormorant Garamond\',serif;font-size:24px;font-weight:700;color:var(--gold);">'+totalYellow+'</div><div style="font-size:9px;color:var(--text-muted);margin-top:4px;">黄色点灯数</div></div>'
+    '<div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:6px;margin-bottom:16px;">'
+    +'<div style="background:var(--bg-card);border:1px solid var(--border);border-radius:8px;padding:10px;text-align:center;"><div style="font-family:\'Cormorant Garamond\',serif;font-size:22px;font-weight:700;color:var(--gold);">'+(releaseM?.elbowAngle ?? '--')+'°</div><div style="font-size:8px;color:var(--text-muted);margin-top:3px;">リリース角度</div></div>'
+    +'<div style="background:var(--bg-card);border:1px solid var(--border);border-radius:8px;padding:10px;text-align:center;"><div style="font-family:\'Cormorant Garamond\',serif;font-size:22px;font-weight:700;color:var(--gold);">'+(metrics[0]?.hipDiff ?? '--')+'</div><div style="font-size:8px;color:var(--text-muted);margin-top:3px;">骨盤スコア</div></div>'
+    +'<div style="background:var(--bg-card);border:1px solid rgba(255,68,68,0.3);border-radius:8px;padding:10px;text-align:center;"><div style="font-family:\'Cormorant Garamond\',serif;font-size:22px;font-weight:700;color:#FF6666;">'+totalRed+'</div><div style="font-size:8px;color:var(--text-muted);margin-top:3px;">🔴 エラー</div></div>'
+    +'<div style="background:var(--bg-card);border:1px solid rgba(255,215,0,0.3);border-radius:8px;padding:10px;text-align:center;"><div style="font-family:\'Cormorant Garamond\',serif;font-size:22px;font-weight:700;color:#FFD700;">'+totalYellow+'</div><div style="font-size:8px;color:var(--text-muted);margin-top:3px;">🟡 注意</div></div>'
     +'</div>';
   document.getElementById('mp-loading-section').style.display = 'none';
   document.getElementById('mp-results-section').style.display = 'block';
@@ -967,9 +1013,9 @@ async function runMediaPipeAnalysis() {
         analyzeFrame(results[2].landmarks, 'release')
       ];
       mediapipeResults = { dip: metrics[0], setup: metrics[1], release: metrics[2] };
-      statusEl.textContent = 'Yellow Lightを生成しています...';
+      statusEl.textContent = 'フォーム分析を描画中...[v4]';
       const overlays = frames.map((f, i) =>
-        f ? renderYellowLight(f, results[i].landmarks, metrics[i].yellowJoints) : null
+        f ? renderFormOverlay(f, results[i].landmarks, metrics[i].yellowJoints, metrics[i].redJoints) : null
       );
       progressEl.style.width = '100%';
       frameImages = frames.map(f => f ? f.toDataURL('image/jpeg', 0.7).split(',')[1] : null);
