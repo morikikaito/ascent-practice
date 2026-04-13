@@ -742,22 +742,29 @@ const SKELETON_CONNECTIONS = [
   ['NOSE','LEFT_SHOULDER'],['NOSE','RIGHT_SHOULDER']
 ];
 
-function drawSkeletonOnCanvas(canvas, landmarks, errorJoints) {
+function getJointColor(status) {
+  if (status === 'error') return { fill: '#FF4444', stroke: '#CC0000', shadow: 'rgba(255,68,68,0.8)', glow: 14 };
+  if (status === 'warning') return { fill: '#FFD700', stroke: '#CC9900', shadow: 'rgba(255,215,0,0.8)', glow: 10 };
+  return { fill: '#FFFFFF', stroke: 'rgba(0,0,0,0.5)', shadow: 'rgba(255,255,255,0.4)', glow: 4 };
+}
+
+function drawSkeletonOnCanvas(canvas, landmarks) {
   const ctx = canvas.getContext('2d');
   const w = canvas.width, h = canvas.height;
   const lmMap = {};
   landmarks.forEach(lm => { lmMap[lm.name || lm.landmark] = lm; });
-  const errors = new Set(errorJoints || []);
 
   ctx.lineWidth = Math.max(3, Math.round(w / 120));
 
   SKELETON_CONNECTIONS.forEach(([a, b]) => {
     const la = lmMap[a], lb = lmMap[b];
     if (la && lb && la.x != null && la.y != null && lb.x != null && lb.y != null) {
-      const isError = errors.has(a) || errors.has(b);
-      ctx.strokeStyle = isError ? '#FF4444' : '#FFFFFF';
-      ctx.shadowColor = isError ? 'rgba(255,68,68,0.8)' : 'rgba(255,255,255,0.6)';
-      ctx.shadowBlur = isError ? 12 : 6;
+      const sA = la.s || 'good', sB = lb.s || 'good';
+      const worst = (sA === 'error' || sB === 'error') ? 'error' : (sA === 'warning' || sB === 'warning') ? 'warning' : 'good';
+      const c = getJointColor(worst);
+      ctx.strokeStyle = c.fill;
+      ctx.shadowColor = c.shadow;
+      ctx.shadowBlur = c.glow;
       ctx.beginPath();
       ctx.moveTo(la.x * w, la.y * h);
       ctx.lineTo(lb.x * w, lb.y * h);
@@ -769,20 +776,20 @@ function drawSkeletonOnCanvas(canvas, landmarks, errorJoints) {
   const r = Math.max(5, Math.round(w / 80));
   landmarks.forEach(lm => {
     if (lm.x != null && lm.y != null) {
-      const name = lm.name || lm.landmark || '';
-      const isError = errors.has(name);
+      const s = lm.s || 'good';
+      const c = getJointColor(s);
       ctx.beginPath();
       ctx.arc(lm.x * w, lm.y * h, r, 0, 2 * Math.PI);
-      ctx.fillStyle = isError ? '#FF4444' : '#FFFFFF';
+      ctx.fillStyle = c.fill;
       ctx.fill();
-      ctx.strokeStyle = isError ? '#CC0000' : 'rgba(0,0,0,0.5)';
+      ctx.strokeStyle = c.stroke;
       ctx.lineWidth = 2;
       ctx.stroke();
 
-      if (isError) {
+      if (s !== 'good') {
         ctx.beginPath();
         ctx.arc(lm.x * w, lm.y * h, r + 6, 0, 2 * Math.PI);
-        ctx.strokeStyle = 'rgba(255,68,68,0.5)';
+        ctx.strokeStyle = s === 'error' ? 'rgba(255,68,68,0.5)' : 'rgba(255,215,0,0.4)';
         ctx.lineWidth = 2;
         ctx.stroke();
       }
@@ -830,12 +837,6 @@ async function serverPoseDetection(canvasFrames, statusEl, progressEl) {
     statusEl.textContent = '骨格線を描画中...';
     progressEl.style.width = '80%';
 
-    var errorJointSets = [
-      ['LEFT_WRIST', 'LEFT_ELBOW'],
-      ['RIGHT_SHOULDER', 'RIGHT_ELBOW'],
-      ['LEFT_HIP', 'RIGHT_HIP']
-    ];
-
     skeletonFrameDataUrls = [];
     let drawnCount = 0;
     canvasFrames.forEach((canvas, i) => {
@@ -848,15 +849,22 @@ async function serverPoseDetection(canvasFrames, statusEl, progressEl) {
       }
       drawnCount++;
 
+      const hasIssues = frameLandmarks.some(lm => lm.s === 'warning' || lm.s === 'error');
+      const errorCount = frameLandmarks.filter(lm => lm.s === 'error').length;
+      const warnCount = frameLandmarks.filter(lm => lm.s === 'warning').length;
+
       if (frameLandmarks.length > 0) {
-        drawSkeletonOnCanvas(canvas, frameLandmarks, errorJointSets[i] || []);
+        drawSkeletonOnCanvas(canvas, frameLandmarks);
       }
 
       skeletonFrameDataUrls.push({
         label: labels[i].label,
         sub: labels[i].sub,
         src: canvas.toDataURL('image/jpeg', 0.85),
-        hasYellow: frameLandmarks.length > 0
+        hasIssues: hasIssues,
+        errorCount: errorCount,
+        warnCount: warnCount,
+        landmarks: frameLandmarks
       });
     });
 
@@ -1481,9 +1489,21 @@ function buildFrameGallery(destId, wrapperId, toggleId, iconId) {
   if (!dest) return;
   dest.innerHTML = '';
   skeletonFrameDataUrls.forEach(function(f) {
+    var hasData = f.landmarks && f.landmarks.length > 0;
+    var borderColor = f.errorCount > 0 ? 'rgba(255,68,68,0.6)' : f.warnCount > 0 ? 'rgba(255,215,0,0.5)' : hasData ? 'rgba(255,255,255,0.3)' : 'rgba(201,168,76,0.15)';
+    var headerColor = f.errorCount > 0 ? '#FF6666' : f.warnCount > 0 ? '#FFD700' : hasData ? '#FFFFFF' : 'rgba(245,240,232,0.4)';
+
+    var badges = '';
+    if (hasData) {
+      if (f.errorCount > 0) badges += '<span style="background:#FF4444;color:#fff;padding:1px 6px;border-radius:8px;font-size:8px;margin-left:4px;">&#x26A0; ' + f.errorCount + '</span>';
+      if (f.warnCount > 0) badges += '<span style="background:#CC9900;color:#fff;padding:1px 6px;border-radius:8px;font-size:8px;margin-left:4px;">&#x25B2; ' + f.warnCount + '</span>';
+      var goodCount = f.landmarks.filter(function(l){ return !l.s || l.s === 'good'; }).length;
+      if (goodCount > 0) badges += '<span style="background:rgba(255,255,255,0.2);color:#fff;padding:1px 6px;border-radius:8px;font-size:8px;margin-left:4px;">&#x2713; ' + goodCount + '</span>';
+    }
+
     var div = document.createElement('div');
-    div.style.cssText = 'margin-bottom:8px;border:1px solid rgba(201,168,76,'+(f.hasYellow?'0.6':'0.15')+');border-radius:10px;overflow:hidden;';
-    div.innerHTML = '<div style="padding:6px 10px;font-family:Cinzel,serif;font-size:9px;letter-spacing:0.15em;color:'+(f.hasYellow?'#C9A84C':'rgba(245,240,232,0.4)')+';display:flex;justify-content:space-between;"><span>'+f.label+'</span><span>'+f.sub+'</span></div>'
+    div.style.cssText = 'margin-bottom:8px;border:1px solid '+borderColor+';border-radius:10px;overflow:hidden;';
+    div.innerHTML = '<div style="padding:6px 10px;font-family:Cinzel,serif;font-size:9px;letter-spacing:0.15em;color:'+headerColor+';display:flex;justify-content:space-between;align-items:center;"><span>'+f.label+'</span><span style="display:flex;align-items:center;">'+badges+'</span></div>'
       + '<img src="'+f.src+'" style="width:100%;display:block;">';
     dest.appendChild(div);
   });
