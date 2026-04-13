@@ -666,9 +666,20 @@ function renderFormOverlay(srcCanvas, landmarks, yellowJoints, redJoints) {
   const ctx = out.getContext('2d');
   ctx.drawImage(srcCanvas, 0, 0);
   applyBlueFilter(out);
+  const W = out.width, H = out.height;
+
+  ctx.font = 'bold ' + Math.max(14, W * 0.035) + 'px sans-serif';
+  ctx.fillStyle = '#00FF00';
+  ctx.fillText('v5 | lm=' + (landmarks ? landmarks.length : 'null') + ' | lm0=' + (landmarks && landmarks[0] ? landmarks[0].length : 'null'), 10, 30);
+  ctx.fillText('y=' + (yellowJoints||[]).length + ' r=' + (redJoints||[]).length, 10, 55);
+
   if (!landmarks || !landmarks.length) return out;
   const lm = landmarks[0];
-  const W = out.width, H = out.height;
+  if (!lm || !lm.length) {
+    ctx.fillText('lm[0] empty!', 10, 80);
+    return out;
+  }
+  ctx.fillText('lm[0].len=' + lm.length + ' | lm[11]=' + (lm[11] ? lm[11].x.toFixed(2)+','+lm[11].y.toFixed(2) : 'null'), 10, 80);
   const reds = new Set(redJoints || []);
   const yellows = new Set(yellowJoints || []);
 
