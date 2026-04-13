@@ -496,31 +496,19 @@ let mediapipeResults = null;
 let skeletonFrameDataUrls = [];
 
 const MP_IDX = {
-  NOSE:0, LEFT_EYE_INNER:1, LEFT_EYE:2, LEFT_EYE_OUTER:3,
-  RIGHT_EYE_INNER:4, RIGHT_EYE:5, RIGHT_EYE_OUTER:6,
-  LEFT_EAR:7, RIGHT_EAR:8, MOUTH_LEFT:9, MOUTH_RIGHT:10,
   LEFT_SHOULDER:11, RIGHT_SHOULDER:12,
   LEFT_ELBOW:13,    RIGHT_ELBOW:14,
   LEFT_WRIST:15,    RIGHT_WRIST:16,
-  LEFT_PINKY:17,    RIGHT_PINKY:18,
-  LEFT_INDEX:19,    RIGHT_INDEX:20,
-  LEFT_THUMB:21,    RIGHT_THUMB:22,
   LEFT_HIP:23,      RIGHT_HIP:24,
   LEFT_KNEE:25,     RIGHT_KNEE:26,
-  LEFT_ANKLE:27,    RIGHT_ANKLE:28,
-  LEFT_HEEL:29,     RIGHT_HEEL:30,
-  LEFT_FOOT_INDEX:31, RIGHT_FOOT_INDEX:32
+  LEFT_ANKLE:27,    RIGHT_ANKLE:28
 };
 const MP_JOINT_LABELS = {
-  NOSE:'鼻', LEFT_EYE:'目（左）', RIGHT_EYE:'目（右）',
-  LEFT_EAR:'耳（左）', RIGHT_EAR:'耳（右）',
   LEFT_SHOULDER:'肩（左）', RIGHT_SHOULDER:'肩（右）',
   LEFT_ELBOW:'肘（左）',    RIGHT_ELBOW:'肘（右）',
   LEFT_WRIST:'手首（左）',  RIGHT_WRIST:'手首（右）',
-  LEFT_INDEX:'人差指（左）', RIGHT_INDEX:'人差指（右）',
   LEFT_HIP:'骨盤（左）',    RIGHT_HIP:'骨盤（右）',
-  LEFT_KNEE:'膝（左）',     RIGHT_KNEE:'膝（右）',
-  LEFT_ANKLE:'足首（左）',  RIGHT_ANKLE:'足首（右）'
+  LEFT_KNEE:'膝（左）',     RIGHT_KNEE:'膝（右）'
 };
 const MP_IDX_TO_NAME = Object.fromEntries(Object.entries(MP_IDX).map(([k,v]) => [v,k]));
 
@@ -545,7 +533,7 @@ async function initMediaPipe() {
   }
   const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
   const delegates = isIOS ? ['CPU'] : ['GPU', 'CPU'];
-  const modelUrl = 'https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_full/float16/1/pose_landmarker_full.task';
+  const modelUrl = 'https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.task';
 
   for (const delegate of delegates) {
     try {
@@ -616,101 +604,55 @@ function calcAngle(a, b, c) {
 }
 
 function analyzeFrame(landmarks, phaseName) {
-  if (!landmarks || !landmarks.length) return { phase: phaseName, yellowJoints: [], redJoints: [], landmarks: [], angles: {} };
+  if (!landmarks || !landmarks.length) return { phase: phaseName, yellowJoints: [], landmarks: [] };
   const lm = landmarks[0];
   const hand = (currentSpecs?.hand === '左') ? 'LEFT' : 'RIGHT';
   const opp = hand === 'RIGHT' ? 'LEFT' : 'RIGHT';
-  const I = (name) => MP_IDX[name];
+  const SHOULDER = MP_IDX[hand + '_SHOULDER'];
+  const ELBOW    = MP_IDX[hand + '_ELBOW'];
+  const WRIST    = MP_IDX[hand + '_WRIST'];
+  const HIP      = MP_IDX[hand + '_HIP'];
+  const OPP_HIP  = MP_IDX[opp + '_HIP'];
 
-  const SHOULDER = I(hand+'_SHOULDER'), OPP_SHOULDER = I(opp+'_SHOULDER');
-  const ELBOW = I(hand+'_ELBOW'), OPP_ELBOW = I(opp+'_ELBOW');
-  const WRIST = I(hand+'_WRIST'), OPP_WRIST = I(opp+'_WRIST');
-  const HIP = I(hand+'_HIP'), OPP_HIP = I(opp+'_HIP');
-  const KNEE = I(hand+'_KNEE'), OPP_KNEE = I(opp+'_KNEE');
-  const ANKLE = I(hand+'_ANKLE');
-  const INDEX = I(hand+'_INDEX');
-  const NOSE = I('NOSE');
-
-  const ang = (a,b,c) => (lm[a] && lm[b] && lm[c]) ? calcAngle(lm[a], lm[b], lm[c]) : null;
-
-  const elbowAngle = ang(SHOULDER, ELBOW, WRIST);
-  const shoulderAngle = ang(HIP, SHOULDER, ELBOW);
-  const kneeAngle = ang(HIP, KNEE, ANKLE);
-  const oppKneeAngle = ang(OPP_HIP, OPP_KNEE, I(opp+'_ANKLE'));
-  const wristAngle = ang(ELBOW, WRIST, INDEX);
-
+  const elbowAngle = (lm[SHOULDER] && lm[ELBOW] && lm[WRIST])
+    ? calcAngle(lm[SHOULDER], lm[ELBOW], lm[WRIST]) : null;
   const hipDiff = (lm[HIP] && lm[OPP_HIP])
     ? Math.round(Math.abs(lm[HIP].y - lm[OPP_HIP].y) * 100) : null;
-  const shoulderDiff = (lm[SHOULDER] && lm[OPP_SHOULDER])
-    ? Math.round(Math.abs(lm[SHOULDER].y - lm[OPP_SHOULDER].y) * 100) : null;
-
-  let bodyTilt = null;
-  if (lm[SHOULDER] && lm[OPP_SHOULDER] && lm[HIP] && lm[OPP_HIP]) {
-    const midSX = (lm[SHOULDER].x + lm[OPP_SHOULDER].x) / 2;
-    const midSY = (lm[SHOULDER].y + lm[OPP_SHOULDER].y) / 2;
-    const midHX = (lm[HIP].x + lm[OPP_HIP].x) / 2;
-    const midHY = (lm[HIP].y + lm[OPP_HIP].y) / 2;
-    const dx = midSX - midHX;
-    const dy = midSY - midHY;
-    bodyTilt = Math.round(Math.atan2(Math.abs(dx), Math.abs(dy)) * 180 / Math.PI);
-  }
-
-  let elbowFlare = null;
-  if (lm[ELBOW] && lm[SHOULDER]) {
-    elbowFlare = Math.round(Math.abs(lm[ELBOW].x - lm[SHOULDER].x) * 100);
-  }
-
-  let followThroughLift = null;
-  if (lm[SHOULDER] && lm[WRIST]) {
-    followThroughLift = Math.round((lm[SHOULDER].y - lm[WRIST].y) * 100);
-  }
-
-  const angles = { elbowAngle, shoulderAngle, kneeAngle, oppKneeAngle, wristAngle, hipDiff, shoulderDiff, bodyTilt, elbowFlare, followThroughLift };
 
   const yellow = [];
   const red = [];
 
   if (phaseName === 'dip') {
-    if (hipDiff !== null && hipDiff > 12) { red.push(hand+'_HIP'); red.push(opp+'_HIP'); }
-    else if (hipDiff !== null && hipDiff > 6) { yellow.push(hand+'_HIP'); yellow.push(opp+'_HIP'); }
-    if (elbowAngle !== null && elbowAngle > 140) { red.push(hand+'_ELBOW'); }
-    else if (elbowAngle !== null && elbowAngle > 110) { yellow.push(hand+'_ELBOW'); }
-    if (kneeAngle !== null && kneeAngle > 170) { red.push(hand+'_KNEE'); }
-    else if (kneeAngle !== null && kneeAngle > 155) { yellow.push(hand+'_KNEE'); }
-    if (bodyTilt !== null && bodyTilt > 15) { red.push(hand+'_SHOULDER'); red.push(hand+'_HIP'); }
-    else if (bodyTilt !== null && bodyTilt > 8) { yellow.push(hand+'_SHOULDER'); }
+    if (hipDiff !== null && hipDiff > 12) { red.push(hand + '_HIP'); red.push(opp + '_HIP'); }
+    else if (hipDiff !== null && hipDiff > 6) { yellow.push(hand + '_HIP'); yellow.push(opp + '_HIP'); }
+    if (elbowAngle !== null && elbowAngle > 140) { red.push(hand + '_ELBOW'); }
+    else if (elbowAngle !== null && elbowAngle > 110) { yellow.push(hand + '_ELBOW'); }
   }
   if (phaseName === 'setup') {
-    if (elbowAngle !== null && (elbowAngle < 50 || elbowAngle > 130)) { red.push(hand+'_ELBOW'); }
-    else if (elbowAngle !== null && (elbowAngle < 65 || elbowAngle > 115)) { yellow.push(hand+'_ELBOW'); }
-    if (elbowFlare !== null && elbowFlare > 12) { red.push(hand+'_ELBOW'); red.push(hand+'_SHOULDER'); }
-    else if (elbowFlare !== null && elbowFlare > 7) { yellow.push(hand+'_SHOULDER'); }
-    if (shoulderAngle !== null && shoulderAngle > 160) { red.push(hand+'_SHOULDER'); }
-    else if (shoulderAngle !== null && shoulderAngle > 140) { yellow.push(hand+'_SHOULDER'); }
-    if (wristAngle !== null && (wristAngle < 130 || wristAngle > 175)) { yellow.push(hand+'_WRIST'); }
+    if (elbowAngle !== null && (elbowAngle < 50 || elbowAngle > 130)) { red.push(hand + '_ELBOW'); }
+    else if (elbowAngle !== null && (elbowAngle < 65 || elbowAngle > 115)) { yellow.push(hand + '_ELBOW'); }
+    if (lm[SHOULDER] && lm[WRIST] && lm[ELBOW]) {
+      const elbowX = lm[ELBOW].x, shoulderX = lm[SHOULDER].x;
+      const flare = Math.abs(elbowX - shoulderX);
+      if (flare > 0.12) { red.push(hand + '_ELBOW'); red.push(hand + '_SHOULDER'); }
+      else if (flare > 0.07) { yellow.push(hand + '_SHOULDER'); }
+    }
   }
   if (phaseName === 'release') {
-    if (elbowAngle !== null && elbowAngle < 120) { red.push(hand+'_ELBOW'); }
-    else if (elbowAngle !== null && (elbowAngle < 135 || elbowAngle > 175)) { yellow.push(hand+'_ELBOW'); }
-    if (followThroughLift !== null && followThroughLift < 2) { red.push(hand+'_WRIST'); }
-    else if (followThroughLift !== null && followThroughLift < 8) { yellow.push(hand+'_WRIST'); }
-    if (wristAngle !== null && wristAngle > 160) { red.push(hand+'_WRIST'); }
-    else if (wristAngle !== null && wristAngle > 145) { yellow.push(hand+'_WRIST'); }
-    if (hipDiff !== null && hipDiff > 10) { yellow.push(hand+'_HIP'); yellow.push(opp+'_HIP'); }
-    if (shoulderAngle !== null && shoulderAngle < 120) { yellow.push(hand+'_SHOULDER'); }
+    if (elbowAngle !== null && elbowAngle < 120) { red.push(hand + '_ELBOW'); }
+    else if (elbowAngle !== null && (elbowAngle < 135 || elbowAngle > 175)) { yellow.push(hand + '_ELBOW'); }
+    if (lm[SHOULDER] && lm[WRIST]) {
+      const lift = lm[SHOULDER].y - lm[WRIST].y;
+      if (lift < 0.02) { red.push(hand + '_WRIST'); }
+      else if (lift < 0.08) { yellow.push(hand + '_WRIST'); }
+    }
+    if (hipDiff !== null && hipDiff > 10) { yellow.push(hand + '_HIP'); yellow.push(opp + '_HIP'); }
   }
 
   return {
     phase: phaseName,
     elbowAngle,
-    shoulderAngle,
-    kneeAngle,
-    wristAngle,
     hipDiff,
-    bodyTilt,
-    elbowFlare,
-    followThroughLift,
-    angles,
     yellowJoints: [...new Set(yellow)],
     redJoints: [...new Set(red)],
     landmarks: lm.map(l => ({ x: l.x, y: l.y, z: l.z, visibility: l.visibility }))
@@ -726,18 +668,24 @@ function renderFormOverlay(srcCanvas, landmarks, yellowJoints, redJoints) {
   applyBlueFilter(out);
   const W = out.width, H = out.height;
 
+  ctx.font = 'bold ' + Math.max(14, W * 0.035) + 'px sans-serif';
+  ctx.fillStyle = '#00FF00';
+  ctx.fillText('v5 | lm=' + (landmarks ? landmarks.length : 'null') + ' | lm0=' + (landmarks && landmarks[0] ? landmarks[0].length : 'null'), 10, 30);
+  ctx.fillText('y=' + (yellowJoints||[]).length + ' r=' + (redJoints||[]).length, 10, 55);
+
   if (!landmarks || !landmarks.length) return out;
   const lm = landmarks[0];
-  if (!lm || !lm.length) return out;
+  if (!lm || !lm.length) {
+    ctx.fillText('lm[0] empty!', 10, 80);
+    return out;
+  }
+  ctx.fillText('lm[0].len=' + lm.length + ' | lm[11]=' + (lm[11] ? lm[11].x.toFixed(2)+','+lm[11].y.toFixed(2) : 'null'), 10, 80);
   const reds = new Set(redJoints || []);
   const yellows = new Set(yellowJoints || []);
 
   const connections = [
-    [0,2],[0,5],[2,7],[5,8],
     [11,12],[11,13],[13,15],[12,14],[14,16],
-    [15,17],[15,19],[15,21],[16,18],[16,20],[16,22],
-    [11,23],[12,24],[23,24],[23,25],[24,26],[25,27],[26,28],
-    [27,29],[27,31],[28,30],[28,32]
+    [11,23],[12,24],[23,24],[23,25],[24,26],[25,27],[26,28]
   ];
   const lw = Math.max(3, W * 0.006);
   ctx.lineWidth = lw;
@@ -823,28 +771,14 @@ function displayMPResults(canvases, metrics) {
     framesEl.appendChild(el);
   }
   const releaseM = metrics[2];
-  const setupM = metrics[1];
-  const dipM = metrics[0];
   const totalRed = metrics.reduce((s, m) => s + (m?.redJoints?.length||0), 0);
   const totalYellow = metrics.reduce((s, m) => s + (m?.yellowJoints?.length||0), 0);
-  const metricCard = (val, unit, label, borderC) => {
-    const bc = borderC || 'var(--border)';
-    const vc = borderC ? (borderC.includes('ff,68') ? '#FF6666' : borderC.includes('215,0') ? '#FFD700' : 'var(--gold)') : 'var(--gold)';
-    return '<div style="background:var(--bg-card);border:1px solid '+bc+';border-radius:8px;padding:8px 4px;text-align:center;">'
-      +'<div style="font-family:\'Cormorant Garamond\',serif;font-size:20px;font-weight:700;color:'+vc+';">'+(val ?? '--')+(unit||'')+'</div>'
-      +'<div style="font-size:7px;color:var(--text-muted);margin-top:2px;">'+label+'</div></div>';
-  };
   document.getElementById('mp-metrics').innerHTML =
-    '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:8px;">'
-    + metricCard(releaseM?.elbowAngle, '°', 'リリース肘角度')
-    + metricCard(setupM?.shoulderAngle, '°', 'セットアップ肩角度')
-    + metricCard(dipM?.kneeAngle, '°', 'ディップ膝角度')
-    +'</div>'
-    +'<div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:6px;margin-bottom:8px;">'
-    + metricCard(dipM?.hipDiff, '', '骨盤左右差')
-    + metricCard(releaseM?.bodyTilt, '°', '体軸傾き')
-    + metricCard(totalRed, '', '🔴 要修正', 'rgba(255,68,68,0.3)')
-    + metricCard(totalYellow, '', '🟡 注意', 'rgba(255,215,0,0.3)')
+    '<div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:6px;margin-bottom:16px;">'
+    +'<div style="background:var(--bg-card);border:1px solid var(--border);border-radius:8px;padding:10px;text-align:center;"><div style="font-family:\'Cormorant Garamond\',serif;font-size:22px;font-weight:700;color:var(--gold);">'+(releaseM?.elbowAngle ?? '--')+'°</div><div style="font-size:8px;color:var(--text-muted);margin-top:3px;">リリース角度</div></div>'
+    +'<div style="background:var(--bg-card);border:1px solid var(--border);border-radius:8px;padding:10px;text-align:center;"><div style="font-family:\'Cormorant Garamond\',serif;font-size:22px;font-weight:700;color:var(--gold);">'+(metrics[0]?.hipDiff ?? '--')+'</div><div style="font-size:8px;color:var(--text-muted);margin-top:3px;">骨盤スコア</div></div>'
+    +'<div style="background:var(--bg-card);border:1px solid rgba(255,68,68,0.3);border-radius:8px;padding:10px;text-align:center;"><div style="font-family:\'Cormorant Garamond\',serif;font-size:22px;font-weight:700;color:#FF6666;">'+totalRed+'</div><div style="font-size:8px;color:var(--text-muted);margin-top:3px;">🔴 エラー</div></div>'
+    +'<div style="background:var(--bg-card);border:1px solid rgba(255,215,0,0.3);border-radius:8px;padding:10px;text-align:center;"><div style="font-family:\'Cormorant Garamond\',serif;font-size:22px;font-weight:700;color:#FFD700;">'+totalYellow+'</div><div style="font-size:8px;color:var(--text-muted);margin-top:3px;">🟡 注意</div></div>'
     +'</div>';
   document.getElementById('mp-loading-section').style.display = 'none';
   document.getElementById('mp-results-section').style.display = 'block';
@@ -858,16 +792,11 @@ function applyBlueFilter(canvas) {
 }
 
 const SKELETON_CONNECTIONS = [
-  ['NOSE','LEFT_EYE'],['NOSE','RIGHT_EYE'],['LEFT_EYE','LEFT_EAR'],['RIGHT_EYE','RIGHT_EAR'],
   ['LEFT_SHOULDER','RIGHT_SHOULDER'],['LEFT_SHOULDER','LEFT_ELBOW'],['LEFT_ELBOW','LEFT_WRIST'],
-  ['RIGHT_SHOULDER','RIGHT_ELBOW'],['RIGHT_ELBOW','RIGHT_WRIST'],
-  ['LEFT_WRIST','LEFT_PINKY'],['LEFT_WRIST','LEFT_INDEX'],['LEFT_WRIST','LEFT_THUMB'],
-  ['RIGHT_WRIST','RIGHT_PINKY'],['RIGHT_WRIST','RIGHT_INDEX'],['RIGHT_WRIST','RIGHT_THUMB'],
-  ['LEFT_SHOULDER','LEFT_HIP'],['RIGHT_SHOULDER','RIGHT_HIP'],['LEFT_HIP','RIGHT_HIP'],
-  ['LEFT_HIP','LEFT_KNEE'],['LEFT_KNEE','LEFT_ANKLE'],
-  ['RIGHT_HIP','RIGHT_KNEE'],['RIGHT_KNEE','RIGHT_ANKLE'],
-  ['LEFT_ANKLE','LEFT_HEEL'],['LEFT_ANKLE','LEFT_FOOT_INDEX'],
-  ['RIGHT_ANKLE','RIGHT_HEEL'],['RIGHT_ANKLE','RIGHT_FOOT_INDEX']
+  ['RIGHT_SHOULDER','RIGHT_ELBOW'],['RIGHT_ELBOW','RIGHT_WRIST'],['LEFT_SHOULDER','LEFT_HIP'],
+  ['RIGHT_SHOULDER','RIGHT_HIP'],['LEFT_HIP','RIGHT_HIP'],['LEFT_HIP','LEFT_KNEE'],
+  ['LEFT_KNEE','LEFT_ANKLE'],['RIGHT_HIP','RIGHT_KNEE'],['RIGHT_KNEE','RIGHT_ANKLE'],
+  ['NOSE','LEFT_SHOULDER'],['NOSE','RIGHT_SHOULDER']
 ];
 
 function getJointColor(status) {
@@ -926,6 +855,132 @@ function drawSkeletonOnCanvas(canvas, landmarks) {
   return canvas;
 }
 
+async function serverPoseDetection(canvasFrames, statusEl, progressEl) {
+  statusEl.textContent = 'AI骨格解析中...（サーバー処理）';
+  progressEl.style.width = '40%';
+
+  const labels = [
+    { label: 'PHASE A — DIP', sub: 'ディップ（最下点）' },
+    { label: 'PHASE B — SETUP', sub: 'セットアップ（構え）' },
+    { label: 'PHASE C — RELEASE', sub: 'リリース（フォロースルー）' }
+  ];
+
+  const validCanvases = canvasFrames.filter(f => f);
+  if (validCanvases.length === 0) return null;
+
+  validCanvases.forEach(c => applyBlueFilter(c));
+
+  const base64Frames = validCanvases.map(f => f.toDataURL('image/jpeg', 0.6).split(',')[1]);
+
+  try {
+    statusEl.textContent = 'AI骨格解析中...（画像送信中）[v3]';
+    progressEl.style.width = '50%';
+
+    const res = await fetch(WORKER_BASE + '/detect-pose', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ frames: base64Frames })
+    });
+
+    if (!res.ok) {
+      const errText = await res.text().catch(() => '');
+      throw new Error('Server ' + res.status + ': ' + errText.substring(0, 100));
+    }
+
+    const data = await res.json();
+    console.log('[detect-pose] Full response keys:', Object.keys(data));
+    console.log('[detect-pose] Debug:', JSON.stringify(data._debug || {}));
+    console.log('[detect-pose] Frames count:', (data.frames || []).length);
+    if (data.frames && data.frames[0]) {
+      console.log('[detect-pose] Frame0 landmarks:', (data.frames[0].landmarks || []).length);
+      console.log('[detect-pose] Frame0 sample:', JSON.stringify((data.frames[0].landmarks || [])[0]));
+    }
+    if (data.error) throw new Error(data.error);
+
+    statusEl.textContent = '骨格線を描画中... (frames:' + (data.frames||[]).length + ')';
+    progressEl.style.width = '80%';
+
+    skeletonFrameDataUrls = [];
+    let drawnCount = 0;
+    canvasFrames.forEach((canvas, i) => {
+      if (!canvas) return;
+      const frameData = data.frames?.[drawnCount];
+      const frameLandmarks = frameData?.landmarks || [];
+      console.log('[detect-pose] Frame ' + i + ': ' + frameLandmarks.length + ' landmarks, keys:', frameLandmarks.length > 0 ? Object.keys(frameLandmarks[0]) : 'none');
+      drawnCount++;
+
+      const hasIssues = frameLandmarks.some(lm => lm.s === 'warning' || lm.s === 'error');
+      const errorCount = frameLandmarks.filter(lm => lm.s === 'error').length;
+      const warnCount = frameLandmarks.filter(lm => lm.s === 'warning').length;
+
+      if (frameLandmarks.length > 0) {
+        drawSkeletonOnCanvas(canvas, frameLandmarks);
+      }
+
+      skeletonFrameDataUrls.push({
+        label: labels[i].label,
+        sub: labels[i].sub,
+        src: canvas.toDataURL('image/jpeg', 0.85),
+        hasIssues: hasIssues,
+        errorCount: errorCount,
+        warnCount: warnCount,
+        landmarks: frameLandmarks
+      });
+    });
+
+    frameImages = canvasFrames.map(f => f ? f.toDataURL('image/jpeg', 0.7).split(',')[1] : null);
+    progressEl.style.width = '100%';
+
+    var totalLm = skeletonFrameDataUrls.reduce(function(s, f){ return s + (f.landmarks||[]).length; }, 0);
+    var totalErr = skeletonFrameDataUrls.reduce(function(s, f){ return s + (f.errorCount||0); }, 0);
+    var totalWarn = skeletonFrameDataUrls.reduce(function(s, f){ return s + (f.warnCount||0); }, 0);
+    statusEl.textContent = '骨格解析完了！ ' + drawnCount + 'フレーム / ' + totalLm + '関節検出 / 🔴' + totalErr + ' 🟡' + totalWarn;
+
+    var dbgEl = document.getElementById('pose-debug');
+    if (!dbgEl) {
+      dbgEl = document.createElement('div');
+      dbgEl.id = 'pose-debug';
+      dbgEl.style.cssText = 'margin:8px 0;padding:8px;background:rgba(0,0,0,0.7);border:1px solid #444;border-radius:6px;font-size:10px;color:#aaa;word-break:break-all;max-height:120px;overflow-y:auto;';
+      statusEl.parentElement.appendChild(dbgEl);
+    }
+    dbgEl.innerHTML = '<b style="color:#fff;">Debug:</b> frames=' + (data.frames||[]).length
+      + ' | f0_landmarks=' + ((data.frames&&data.frames[0])?data.frames[0].landmarks.length:'N/A')
+      + ' | sample=' + (data._debug?.sampleLandmark ? JSON.stringify(data._debug.sampleLandmark) : 'none')
+      + ' | status_counts=' + JSON.stringify(data._debug?.statusCounts||{})
+      + '<br><b style="color:#fff;">Raw preview:</b> ' + (data._debug?.rawTextPreview||'').substring(0,150);
+
+    return true;
+  } catch (e) {
+    console.error('Server pose detection failed:', e);
+    statusEl.textContent = '骨格検出エラー: ' + e.message.substring(0, 80);
+
+    var dbgEl2 = document.getElementById('pose-debug');
+    if (!dbgEl2) {
+      dbgEl2 = document.createElement('div');
+      dbgEl2.id = 'pose-debug';
+      dbgEl2.style.cssText = 'margin:8px 0;padding:8px;background:rgba(255,0,0,0.2);border:1px solid #f44;border-radius:6px;font-size:10px;color:#faa;word-break:break-all;max-height:120px;overflow-y:auto;';
+      statusEl.parentElement.appendChild(dbgEl2);
+    }
+    dbgEl2.innerHTML = '<b style="color:#f44;">ERROR:</b> ' + e.message + '<br><b>Stack:</b> ' + (e.stack||'').substring(0,200);
+
+    skeletonFrameDataUrls = [];
+    canvasFrames.forEach((canvas, i) => {
+      if (!canvas) return;
+      skeletonFrameDataUrls.push({
+        label: labels[i].label,
+        sub: labels[i].sub,
+        src: canvas.toDataURL('image/jpeg', 0.85),
+        hasIssues: false,
+        errorCount: 0,
+        warnCount: 0,
+        landmarks: []
+      });
+    });
+    frameImages = canvasFrames.map(f => f ? f.toDataURL('image/jpeg', 0.7).split(',')[1] : null);
+    return true;
+  }
+}
+
 async function runMediaPipeAnalysis() {
   showPhase('phase-mediapipe');
   const statusEl = document.getElementById('mp-status');
@@ -956,7 +1011,7 @@ async function runMediaPipeAnalysis() {
 
     if (landmarker) {
       progressEl.style.width = '60%';
-      statusEl.textContent = '33キーポイントで関節座標を計算中...';
+      statusEl.textContent = '関節の座標を計算しています...[v5]';
       const results = frames.map(f => {
         if (!f) return { landmarks: [] };
         try { return landmarker.detect(f); }
@@ -964,7 +1019,7 @@ async function runMediaPipeAnalysis() {
       });
 
       const detectedCount = results.filter(r => r.landmarks && r.landmarks.length > 0 && r.landmarks[0].length > 5).length;
-      statusEl.textContent = 'MediaPipe検出: ' + detectedCount + '/3フレーム';
+      statusEl.textContent = 'MediaPipe検出: ' + detectedCount + '/3フレーム [v5]';
 
       if (detectedCount >= 1) {
         progressEl.style.width = '80%';
@@ -982,15 +1037,19 @@ async function runMediaPipeAnalysis() {
         frameImages = frames.map(f => f ? f.toDataURL('image/jpeg', 0.7).split(',')[1] : null);
         displayMPResults(overlays, metrics);
       } else {
-        statusEl.textContent = 'MediaPipeで人物を検出できませんでした。フレーム画像のみで診断を進めます。';
-        progressEl.style.width = '100%';
-        await extractFallbackFrames();
+        statusEl.textContent = 'MediaPipeで検出できず → AIサーバー解析に切替...[v5]';
+        const serverResult = await serverPoseDetection(frames, statusEl, progressEl);
+        if (!serverResult) {
+          await extractFallbackFrames();
+        }
         proceedToSpec();
       }
     } else {
-      statusEl.textContent = 'MediaPipe初期化に失敗しました。フレーム画像のみで診断を進めます。';
-      progressEl.style.width = '100%';
-      await extractFallbackFrames();
+      statusEl.textContent = 'MediaPipe初期化失敗 → AIサーバー解析...[v5]';
+      const serverResult = await serverPoseDetection(frames, statusEl, progressEl);
+      if (!serverResult) {
+        await extractFallbackFrames();
+      }
       proceedToSpec();
     }
   } catch (e) {
@@ -1467,28 +1526,10 @@ async function startDiagnosis(specs) {
   let mpDataText = '';
   if (mediapipeResults) {
     const mp = mediapipeResults;
-    mpDataText = '\n\n【MediaPipe骨格解析データ（33キーポイント・Full精度モデル）】';
-    const formatPhase = (name, label, data) => {
-      if (!data) return '';
-      const a = data.angles || {};
-      let t = `\n\n${name}（${label}）:`;
-      t += `\n  肘角度=${a.elbowAngle ?? '--'}°`;
-      t += ` / 肩角度=${a.shoulderAngle ?? '--'}°`;
-      t += ` / 膝角度=${a.kneeAngle ?? '--'}°`;
-      t += ` / 手首角度=${a.wristAngle ?? '--'}°`;
-      t += `\n  骨盤左右差=${a.hipDiff ?? '--'}`;
-      t += ` / 肩左右差=${a.shoulderDiff ?? '--'}`;
-      t += ` / 体軸傾き=${a.bodyTilt ?? '--'}°`;
-      t += ` / 肘の開き=${a.elbowFlare ?? '--'}`;
-      if (name === 'RELEASE') t += ` / フォロースルー高さ=${a.followThroughLift ?? '--'}`;
-      const reds = data.redJoints?.length > 0 ? data.redJoints.map(j => MP_JOINT_LABELS[j]||j).join('・') : 'なし';
-      const yellows = data.yellowJoints?.length > 0 ? data.yellowJoints.map(j => MP_JOINT_LABELS[j]||j).join('・') : 'なし';
-      t += `\n  🔴要修正=${reds} / 🟡要注意=${yellows}`;
-      return t;
-    };
-    mpDataText += formatPhase('DIP', '最下点', mp.dip);
-    mpDataText += formatPhase('SETUP', '構え', mp.setup);
-    mpDataText += formatPhase('RELEASE', 'リリース', mp.release);
+    mpDataText = '\n\n【MediaPipe骨格解析データ】';
+    if (mp.dip) mpDataText += `\nDIP（最下点）: 肘角度=${mp.dip.elbowAngle ?? '--'}° / 骨盤差=${mp.dip.hipDiff ?? '--'} / 要注意=${mp.dip.yellowJoints.join(',')||'なし'}`;
+    if (mp.setup) mpDataText += `\nSETUP（構え）: 肘角度=${mp.setup.elbowAngle ?? '--'}° / 骨盤差=${mp.setup.hipDiff ?? '--'} / 要注意=${mp.setup.yellowJoints.join(',')||'なし'}`;
+    if (mp.release) mpDataText += `\nRELEASE（リリース）: 肘角度=${mp.release.elbowAngle ?? '--'}° / 骨盤差=${mp.release.hipDiff ?? '--'} / 要注意=${mp.release.yellowJoints.join(',')||'なし'}`;
   }
 
   conversationHistory = [
@@ -1694,18 +1735,40 @@ async function submitAnswer() {
   conversationHistory.push({ role: 'user', content: selectedChoice });
 
   try {
-    const res = await fetch(DIAGNOSE_ENDPOINT, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ system: SYSTEM_PROMPT, messages: conversationHistory })
-    });
-    if (!res.ok) {
-      const errText = await res.text().catch(() => '');
-      throw new Error('AI接続エラー (' + res.status + ')');
+    let responseText = '';
+    try {
+      const res = await fetch(DIAGNOSE_ENDPOINT, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ system: SYSTEM_PROMPT, messages: conversationHistory })
+      });
+      if (!res.ok) {
+        const errText = await res.text();
+        throw new Error('Worker error ' + res.status);
+      }
+      const data = await res.json();
+      if (data.error) throw new Error(data.error);
+      responseText = data.text;
+    } catch (workerErr) {
+      console.warn('Worker failed, falling back to Gemini:', workerErr.message);
+      const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`;
+      const geminiHistory = conversationHistory.map(m => ({
+        role: m.role === 'assistant' ? 'model' : m.role,
+        parts: [{ text: typeof m.content === 'string' ? m.content : JSON.stringify(m.content) }]
+      }));
+      const gRes = await fetch(geminiUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          system_instruction: { parts: [{ text: SYSTEM_PROMPT }] },
+          contents: geminiHistory
+        })
+      });
+      if (!gRes.ok) throw new Error('AI接続エラー: Worker=' + workerErr.message);
+      const gData = await gRes.json();
+      responseText = gData.candidates?.[0]?.content?.parts?.[0]?.text || '';
     }
-    const data = await res.json();
-    if (data.error) throw new Error(data.error);
-    const responseText = data.text;
+
     if (!responseText) throw new Error('AIから応答がありません');
 
     conversationHistory.push({ role: 'assistant', content: responseText });
