@@ -1304,10 +1304,10 @@ document.addEventListener('DOMContentLoaded', async () => {
 async function checkUserTier() {
   if (lineUid === 'anonymous') return;
   try {
-    const res = await fetch(WORKER_BASE + '/verify-customer', {
+    const res = await fetch(WORKER_BASE + '/verify-member', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ lineUid, tableId: AIRTABLE_TABLE_CUSTOMERS })
+      body: JSON.stringify({ lineUid })
     });
     if (!res.ok) return;
     const data = await res.json();
@@ -1736,38 +1736,15 @@ async function submitAnswer() {
 
   try {
     let responseText = '';
-    try {
-      const res = await fetch(DIAGNOSE_ENDPOINT, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ system: SYSTEM_PROMPT, messages: conversationHistory })
-      });
-      if (!res.ok) {
-        const errText = await res.text();
-        throw new Error('Worker error ' + res.status);
-      }
-      const data = await res.json();
-      if (data.error) throw new Error(data.error);
-      responseText = data.text;
-    } catch (workerErr) {
-      console.warn('Worker failed, falling back to Gemini:', workerErr.message);
-      const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`;
-      const geminiHistory = conversationHistory.map(m => ({
-        role: m.role === 'assistant' ? 'model' : m.role,
-        parts: [{ text: typeof m.content === 'string' ? m.content : JSON.stringify(m.content) }]
-      }));
-      const gRes = await fetch(geminiUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          system_instruction: { parts: [{ text: SYSTEM_PROMPT }] },
-          contents: geminiHistory
-        })
-      });
-      if (!gRes.ok) throw new Error('AI接続エラー: Worker=' + workerErr.message);
-      const gData = await gRes.json();
-      responseText = gData.candidates?.[0]?.content?.parts?.[0]?.text || '';
-    }
+    const res = await fetch(DIAGNOSE_ENDPOINT, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ system: SYSTEM_PROMPT, messages: conversationHistory })
+    });
+    if (!res.ok) throw new Error('AI接続エラー: ' + res.status);
+    const data = await res.json();
+    if (data.error) throw new Error(data.error);
+    responseText = data.text;
 
     if (!responseText) throw new Error('AIから応答がありません');
 

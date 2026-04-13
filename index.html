@@ -121,8 +121,113 @@ html, body {
 }
 .plan-opt:active { transform: scale(0.97); }
 
-/* ━━━ HOME ━━━ */
-#screen-home { background: var(--bg); justify-content: flex-start; padding: 0; }
+/* ━━━ TOP-LEVEL HOME (SELECTION SCREEN) ━━━ */
+#screen-home {
+  background: radial-gradient(ellipse at 50% 30%, rgba(201,168,76,0.08) 0%, transparent 60%), var(--bg);
+}
+.home-selection {
+  width: 100%; max-width: 360px; display: flex; flex-direction: column; align-items: center; gap: 16px;
+}
+.home-selection .btn-primary { font-size: 15px; padding: 18px; letter-spacing: 0.12em; }
+.btn-outline {
+  width: 100%;
+  background: transparent; border: 1.5px solid var(--border-bright);
+  border-radius: var(--radius-sm); padding: 18px;
+  color: var(--text); font-family: 'Cinzel', serif; font-size: 14px; font-weight: 600;
+  letter-spacing: 0.12em; cursor: pointer; transition: border-color 0.2s, color 0.2s, background 0.2s;
+}
+.btn-outline:hover { border-color: var(--gold); color: var(--gold); }
+.btn-outline:active { opacity: 0.85; transform: scale(0.98); }
+.home-footer {
+  margin-top: 32px; font-size: 11px; color: var(--text-dim);
+  letter-spacing: 0.08em; text-align: center; font-family: 'Cinzel', serif;
+}
+
+/* ━━━ AUTH SCREEN ━━━ */
+#screen-auth {
+  background: radial-gradient(ellipse at 50% 30%, rgba(201,168,76,0.08) 0%, transparent 60%), var(--bg);
+}
+.auth-form { width: 100%; max-width: 320px; }
+.auth-title {
+  font-family: 'Cinzel', serif; font-size: 18px; font-weight: 700;
+  letter-spacing: 0.15em; color: var(--gold); text-align: center; margin-bottom: 8px;
+}
+.auth-subtitle {
+  font-size: 13px; color: var(--text-muted); text-align: center; margin-bottom: 28px;
+}
+.auth-fallback {
+  display: block; text-align: center; margin-top: 20px;
+  font-size: 13px; color: var(--text-dim); cursor: pointer;
+  text-decoration: none; transition: color 0.2s;
+  font-family: 'Noto Serif JP', serif;
+}
+.auth-fallback:hover { color: var(--gold); }
+.auth-back {
+  display: block; text-align: center; margin-top: 16px;
+  font-size: 13px; color: var(--text-dim); cursor: pointer;
+  background: none; border: none; font-family: 'Noto Serif JP', serif;
+  transition: color 0.2s;
+}
+.auth-back:hover { color: var(--text-muted); }
+.auth-error { color: var(--danger); font-size: 13px; text-align: center; margin-top: 12px; min-height: 20px; }
+
+/* ━━━ SHOT COUNTER ━━━ */
+#screen-counter {
+  background: var(--bg); justify-content: flex-start; padding: 0;
+}
+.counter-header {
+  width: 100%; padding: 16px 20px; border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; gap: 12px; background: var(--bg-card);
+}
+.counter-back-btn {
+  background: none; border: none; color: var(--text-muted); cursor: pointer;
+  padding: 4px; display: flex; align-items: center; font-size: 20px;
+}
+.counter-title { font-family: 'Cinzel', serif; font-size: 14px; letter-spacing: 0.15em; color: var(--text); flex: 1; }
+.counter-body {
+  flex: 1; width: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center;
+  padding: 24px; max-width: 480px; margin: 0 auto;
+}
+.counter-display {
+  background: var(--bg-card); border: 1px solid var(--border-bright); border-radius: var(--radius);
+  padding: 24px; width: 100%; text-align: center; margin-bottom: 24px;
+}
+.counter-percent {
+  font-family: 'Cinzel', serif; font-size: 48px; font-weight: 700; color: var(--gold);
+  margin-bottom: 8px; line-height: 1;
+}
+.counter-detail {
+  font-family: 'Cinzel', serif; font-size: 20px; color: var(--text-muted); letter-spacing: 0.05em;
+}
+.counter-buttons {
+  display: flex; gap: 16px; width: 100%; margin-bottom: 24px;
+}
+.counter-btn {
+  flex: 1; aspect-ratio: 1; max-height: 160px;
+  display: flex; align-items: center; justify-content: center;
+  border: none; border-radius: var(--radius); cursor: pointer;
+  font-family: 'Cinzel', serif; font-size: 32px; font-weight: 700;
+  letter-spacing: 0.1em; transition: opacity 0.1s, transform 0.1s;
+  user-select: none; -webkit-user-select: none;
+}
+.counter-btn:active { opacity: 0.8; transform: scale(0.96); }
+.counter-btn-in {
+  background: linear-gradient(135deg, rgba(76,175,80,0.15), rgba(76,175,80,0.25));
+  border: 2px solid var(--success); color: var(--success);
+}
+.counter-btn-out {
+  background: linear-gradient(135deg, rgba(229,57,53,0.1), rgba(229,57,53,0.2));
+  border: 2px solid var(--danger); color: var(--danger);
+}
+.counter-reset {
+  background: none; border: 1px solid var(--border); border-radius: 100px;
+  padding: 10px 32px; color: var(--text-dim); font-size: 13px; cursor: pointer;
+  font-family: 'Noto Serif JP', serif; transition: border-color 0.2s, color 0.2s;
+}
+.counter-reset:hover { border-color: var(--gold); color: var(--text-muted); }
+
+/* ━━━ DASHBOARD ━━━ */
+#screen-dashboard { background: var(--bg); justify-content: flex-start; padding: 0; }
 .home-header {
   width: 100%; padding: 20px 20px 16px; border-bottom: 1px solid var(--border);
   display: flex; align-items: center; justify-content: space-between;
@@ -431,6 +536,52 @@ html, body {
   </div>
 </div>
 
+<!-- ━━━ HOME (TOP-LEVEL SELECTION) ━━━ -->
+<div class="screen" id="screen-home">
+  <img src="images/kait.png" alt="ASCENT" style="width:240px;max-width:80%;margin:0 auto 32px;display:block;">
+  <div class="home-selection">
+    <button class="btn-primary" onclick="goToDiagnosis()">AI シュート診断</button>
+    <button class="btn-primary" onclick="goToTraining()">自主練トレーニング</button>
+    <button class="btn-outline" onclick="goToCounter()">シュートカウンター（無料）</button>
+  </div>
+  <div class="home-footer">ASCENT PRACTICE v3</div>
+</div>
+
+<!-- ━━━ AUTH (LINE User ID) ━━━ -->
+<div class="screen" id="screen-auth">
+  <div class="auth-form">
+    <div class="auth-title">MEMBER LOGIN</div>
+    <div class="auth-subtitle">LINE User ID またはメールアドレスを入力してください</div>
+    <div style="margin-bottom:16px">
+      <label class="form-label" for="auth-id-input">LINE USER ID / EMAIL</label>
+      <input class="form-input" type="text" id="auth-id-input" placeholder="LINE User ID またはメールアドレス" autocomplete="username">
+    </div>
+    <button class="btn-primary" id="auth-btn">認証する</button>
+    <div class="auth-error" id="auth-error"></div>
+    <a class="auth-fallback" onclick="showScreen('screen-login')">パスワードでログイン →</a>
+    <button class="auth-back" onclick="showScreen('screen-home')">← 戻る</button>
+  </div>
+</div>
+
+<!-- ━━━ SHOT COUNTER (FREE) ━━━ -->
+<div class="screen" id="screen-counter">
+  <div class="counter-header">
+    <button class="counter-back-btn" onclick="showScreen('screen-home')">←</button>
+    <div class="counter-title">SHOT COUNTER</div>
+  </div>
+  <div class="counter-body">
+    <div class="counter-display">
+      <div class="counter-percent" id="counter-percent">0%</div>
+      <div class="counter-detail" id="counter-detail">0 / 0</div>
+    </div>
+    <div class="counter-buttons">
+      <button class="counter-btn counter-btn-in" onclick="counterRecord(true)">IN</button>
+      <button class="counter-btn counter-btn-out" onclick="counterRecord(false)">OUT</button>
+    </div>
+    <button class="counter-reset" onclick="counterReset()">リセット</button>
+  </div>
+</div>
+
 <!-- ━━━ LOGIN ━━━ -->
 <div class="screen" id="screen-login">
   <div class="login-logo"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg></div>
@@ -450,11 +601,12 @@ html, body {
     </div>
     <button class="btn-primary" id="login-btn">ENTER</button>
     <div class="login-error" id="login-error"></div>
+    <button class="auth-back" onclick="showScreen('screen-auth')" style="margin-top:16px">← 戻る</button>
   </div>
 </div>
 
 <!-- ━━━ HOME ━━━ -->
-<div class="screen" id="screen-home">
+<div class="screen" id="screen-dashboard">
   <div class="home-header">
     <div class="home-brand">ASCENT<span>PRACTICE SYSTEM</span></div>
     <div class="header-right">
@@ -499,7 +651,7 @@ html, body {
 
 <!-- ━━━ MODE SELECT ━━━ -->
 <div class="screen" id="screen-mode-select">
-  <div class="sub-header"><button class="back-btn" onclick="showScreen('screen-home')">←</button><div class="sub-title">JUDGMENT TRAINING</div></div>
+  <div class="sub-header"><button class="back-btn" onclick="showScreen('screen-dashboard')">←</button><div class="sub-title">JUDGMENT TRAINING</div></div>
   <div class="sub-content">
     <div class="mode-card" onclick="selectMode(1)"><div class="mode-card-title">MODE 1 — DRIBBLE</div><div class="mode-card-desc">ドリブル技術。番号に対応した技を瞬時に判断せよ。</div><div class="mode-legend"><div class="mode-legend-item"><span>1</span>クロスオーバー</div><div class="mode-legend-item"><span>2</span>レッグスルー</div><div class="mode-legend-item"><span>3</span>ビハインド</div></div></div>
     <div class="mode-card" onclick="selectMode(2)"><div class="mode-card-title">MODE 2 — 3x3 SHOT BASIC</div><div class="mode-card-desc">3x3シュート判断・初級。2点ライン内=1点 / 外=2点。</div><div class="mode-legend"><div class="mode-legend-item"><span>1</span>1点シュート</div><div class="mode-legend-item"><span>2</span>2点シュート</div></div></div>
@@ -528,7 +680,7 @@ html, body {
 
 <!-- ━━━ REACTION SELECT ━━━ -->
 <div class="screen" id="screen-reaction-select">
-  <div class="sub-header"><button class="back-btn" onclick="showScreen('screen-home')">←</button><div class="sub-title">REACTION SPEED</div></div>
+  <div class="sub-header"><button class="back-btn" onclick="showScreen('screen-dashboard')">←</button><div class="sub-title">REACTION SPEED</div></div>
   <div class="sub-content">
     <div class="settings-group"><div class="settings-label">VOLUME</div><div class="volume-group"><span class="volume-icon">🔊</span><input type="range" class="volume-slider" min="0" max="100" value="70" oninput="setVolume(this.value)"><span class="volume-val">70%</span></div></div>
     <div class="section-title">SELECT DIFFICULTY</div>
@@ -546,7 +698,7 @@ html, body {
 
 <!-- ━━━ SHOOT SELECT ━━━ -->
 <div class="screen" id="screen-shoot-select">
-  <div class="sub-header"><button class="back-btn" onclick="showScreen('screen-home')">←</button><div class="sub-title">SHOOT RECORD</div></div>
+  <div class="sub-header"><button class="back-btn" onclick="showScreen('screen-dashboard')">←</button><div class="sub-title">SHOOT RECORD</div></div>
   <div class="sub-content">
     <div class="mode-card" onclick="startShootRecord('1P')"><div class="mode-card-title">1P SHOT</div><div class="mode-card-desc">3x3 — 2点ライン内のシュート（1点）を記録</div></div>
     <div class="mode-card" onclick="startShootRecord('2P')"><div class="mode-card-title">2P SHOT</div><div class="mode-card-desc">3x3 — 2点ライン外のシュート（2点）を記録</div></div>
@@ -574,7 +726,7 @@ html, body {
 
 <!-- ━━━ HISTORY ━━━ -->
 <div class="screen" id="screen-history">
-  <div class="sub-header"><button class="back-btn" onclick="showScreen('screen-home')">←</button><div class="sub-title">TRAINING HISTORY</div></div>
+  <div class="sub-header"><button class="back-btn" onclick="showScreen('screen-dashboard')">←</button><div class="sub-title">TRAINING HISTORY</div></div>
   <div class="sub-content">
     <div class="history-summary"><div class="summary-card"><span class="summary-value" id="total-sessions">0</span><span class="summary-label">総セッション数</span></div><div class="summary-card"><span class="summary-value" id="total-title">ROOKIE</span><span class="summary-label">現在の称号</span></div></div>
     <div class="section-title">ALL RECORDS</div>
@@ -692,9 +844,90 @@ function showScreen(id) {
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
   document.getElementById(id).classList.add('active');
   state.currentScreen = id;
-  if (id === 'screen-home') updateHome();
+  if (id === 'screen-dashboard') updateHome();
   if (id === 'screen-history') updateHistoryScreen();
   if (id === 'screen-reaction-select') renderReactionSelect();
+}
+
+/* ━━━ TOP-LEVEL NAV ━━━ */
+function goToDiagnosis() {
+  const plan = localStorage.getItem('currentPlan');
+  const authId = localStorage.getItem('ascent_auth_id');
+  if (plan && plan !== 'free' && authId) {
+    location.href = 'trial.html?mode=paid&uid=' + encodeURIComponent(authId);
+  } else {
+    location.href = 'trial.html?mode=free';
+  }
+}
+function goToTraining() {
+  if (isAuthValid() && localStorage.getItem('currentPlan') && localStorage.getItem('currentPlan') !== 'free') {
+    showScreen('screen-dashboard');
+  } else {
+    showScreen('screen-auth');
+  }
+}
+function goToAuth() { showScreen('screen-auth'); }
+function goToCounter() { counterReset(); showScreen('screen-counter'); }
+
+/* ━━━ AUTH (LINE ID / Email → Airtable) ━━━ */
+const WORKER_BASE = 'https://ascent-agent.because-and-and-and.workers.dev';
+const AT_FIELDS = { unleash: 'fldMdXQ1KVrOjPkrA', pro: 'fldsm6toargqzNba6', lite: 'fldx9r5emLQAN2y0u' };
+
+async function attemptAuth() {
+  const val = document.getElementById('auth-id-input').value.trim();
+  const err = document.getElementById('auth-error');
+  const btn = document.getElementById('auth-btn');
+  if (!val) { err.textContent = 'IDまたはメールアドレスを入力してください'; return; }
+  err.textContent = '';
+  btn.disabled = true; btn.textContent = '認証中…';
+  try {
+    const isEmail = val.includes('@');
+    const res = await fetch(WORKER_BASE + '/verify-member', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ lineUid: val })
+    });
+    const data = await res.json();
+    if (data.found && data.fields) {
+      let plan = 'free';
+      if (data.fields[AT_FIELDS.pro]) plan = 'pro';
+      else if (data.fields[AT_FIELDS.unleash]) plan = 'unleash';
+      else if (data.fields[AT_FIELDS.lite]) plan = 'lite';
+      localStorage.setItem('ascent_auth', Date.now().toString());
+      localStorage.setItem('ascent_auth_id', val);
+      localStorage.setItem('currentPlan', plan);
+      if (plan === 'free') {
+        err.textContent = '無料プランです。シュートカウンターと1回限りの診断が利用できます。';
+        setTimeout(() => showScreen('screen-dashboard'), 1500);
+      } else {
+        showScreen('screen-dashboard');
+      }
+    } else {
+      err.textContent = '会員情報が見つかりません。LINE User IDまたはメールアドレスをご確認ください。';
+    }
+  } catch (e) {
+    err.textContent = '通信エラーが発生しました。もう一度お試しください。';
+  } finally {
+    btn.disabled = false; btn.textContent = '認証する';
+  }
+}
+
+/* ━━━ SHOT COUNTER (FREE) ━━━ */
+let counterState = { made: 0, total: 0 };
+function counterRecord(made) {
+  counterState.total++;
+  if (made) counterState.made++;
+  updateCounterDisplay();
+}
+function counterReset() {
+  counterState.made = 0;
+  counterState.total = 0;
+  updateCounterDisplay();
+}
+function updateCounterDisplay() {
+  const pct = counterState.total > 0 ? Math.round((counterState.made / counterState.total) * 100) : 0;
+  document.getElementById('counter-percent').textContent = pct + '%';
+  document.getElementById('counter-detail').textContent = counterState.made + ' / ' + counterState.total;
 }
 
 /* ━━━ LOGIN ① ━━━ */
@@ -711,7 +944,7 @@ function login() {
     err.textContent = '';
     localStorage.setItem('ascent_auth', Date.now().toString());
     localStorage.setItem('currentPlan', plan);
-    showScreen('screen-home');
+    showScreen('screen-dashboard');
   } else {
     err.textContent = 'アクセスコードが正しくありません';
     document.getElementById('password-input').value = '';
@@ -721,8 +954,10 @@ function login() {
 function logout() {
   localStorage.removeItem('ascent_auth');
   localStorage.removeItem('currentPlan');
+  localStorage.removeItem('ascent_auth_id');
   document.getElementById('password-input').value = '';
-  showScreen('screen-login');
+  document.getElementById('auth-id-input').value = '';
+  showScreen('screen-home');
 }
 function isAuthValid() {
   const ts = localStorage.getItem('ascent_auth');
@@ -861,9 +1096,9 @@ function finishDrill() {
   showResult({ badge:'🏀', title:'DRILL COMPLETE', subtitle:getModeLabel(state.selectedMode)+' — '+new Date().toLocaleDateString('ja-JP'),
     stats:[{value:state.drill.count,label:'表示回数'},{value:timeStr,label:'タイム'},{value:cur||'—',label:'称号'}],
     message:'集中力と判断力が鍛えられた。継続が力になる。', titleChanged:prev!==cur?cur:null,
-    actions:[{text:'もう一度',primary:true,action:'startDrill()'},{text:'ホームに戻る',primary:false,action:"showScreen('screen-home')"}] });
+    actions:[{text:'もう一度',primary:true,action:'startDrill()'},{text:'ホームに戻る',primary:false,action:"showScreen('screen-dashboard')"}] });
 }
-function abortDrill() { state.drill.running = false; clearInterval(state.drill.timerId); clearTimeout(state.drill.numberId); showScreen('screen-home'); }
+function abortDrill() { state.drill.running = false; clearInterval(state.drill.timerId); clearTimeout(state.drill.numberId); showScreen('screen-dashboard'); }
 
 /* ━━━ REACTION SELECT ② ━━━ */
 function showReactionSelect() { showScreen('screen-reaction-select'); }
@@ -973,9 +1208,9 @@ function finishReaction() {
     stats:[{value:avgTime+'ms',label:'平均反応速度'},{value:rate+'%',label:'正答率'},{value:r.correct+'/'+r.total,label:'正解数'}], pbHtml:pbHtml,
     message: avgTime<=300?'驚異的な反応速度！試合でも活きる判断力だ。':avgTime<=500?'良い反応速度。継続でさらに速くなる。':'反応速度は鍛えられる。毎日の反復が鍵だ。',
     titleChanged:prev!==cur?cur:null,
-    actions:[{text:'もう一度',primary:true,action:"startReactionWithDifficulty('"+r.difficulty+"')"},{text:'結果をシェア',primary:false,action:'shareReactionResult()',isShare:true},{text:'ホームに戻る',primary:false,action:"showScreen('screen-home')"}] });
+    actions:[{text:'もう一度',primary:true,action:"startReactionWithDifficulty('"+r.difficulty+"')"},{text:'結果をシェア',primary:false,action:'shareReactionResult()',isShare:true},{text:'ホームに戻る',primary:false,action:"showScreen('screen-dashboard')"}] });
 }
-function abortReaction() { state.reaction.running=false; clearInterval(state.reaction.timerId); clearTimeout(state.reaction.hideId); showScreen('screen-home'); }
+function abortReaction() { state.reaction.running=false; clearInterval(state.reaction.timerId); clearTimeout(state.reaction.hideId); showScreen('screen-dashboard'); }
 
 function shareReactionResult() {
   const data = state._lastReactionResult; if (!data) return;
@@ -991,14 +1226,14 @@ function startShootRecord(type) { state.shoot={made:0,total:0,type:type}; docume
 function recordShot(made) { state.shoot.total++; if(made) state.shoot.made++; updateShootDisplay(); }
 function updateShootDisplay() { const s=state.shoot; const rate=s.total>0?Math.round((s.made/s.total)*100):0; document.getElementById('shoot-rate').textContent=rate+'%'; document.getElementById('shoot-detail').textContent=s.total+'本中 '+s.made+'本成功'; }
 function finishShootRecord() {
-  const s=state.shoot; if(s.total===0){showScreen('screen-home');return;}
+  const s=state.shoot; if(s.total===0){showScreen('screen-dashboard');return;}
   const rate=Math.round((s.made/s.total)*100);
   saveToHistory({date:new Date().toISOString(),type:'shoot',modeLabel:'SHOOT — '+s.type,shotType:s.type,made:s.made,total:s.total,rate:rate}); recordHeatmap();
   const prev=getTitle(getSessionCount()-1);const cur=getTitle();
   showResult({badge:'🎯',title:'SESSION COMPLETE',subtitle:s.type+' SHOT — '+new Date().toLocaleDateString('ja-JP'),
     stats:[{value:s.made+'/'+s.total,label:'シュート'},{value:rate+'%',label:'成功率'}],statsCols:2,
     message:rate>=80?'素晴らしい成功率！この調子を維持しよう。':rate>=50?'安定した確率。フォームを意識して継続しよう。':'シュートは反復が全て。明日も打ち続けよう。',
-    titleChanged:prev!==cur?cur:null,actions:[{text:'もう一度記録する',primary:true,action:"startShootRecord('"+s.type+"')"},{text:'ホームに戻る',primary:false,action:"showScreen('screen-home')"}]});
+    titleChanged:prev!==cur?cur:null,actions:[{text:'もう一度記録する',primary:true,action:"startShootRecord('"+s.type+"')"},{text:'ホームに戻る',primary:false,action:"showScreen('screen-dashboard')"}]});
 }
 
 /* ━━━ RESULT ━━━ */
@@ -1040,13 +1275,15 @@ function showToast(msg){const t=document.getElementById('toast');t.textContent=m
 function init(){
   document.getElementById('login-btn').addEventListener('click',login);
   document.getElementById('password-input').addEventListener('keydown',e=>{if(e.key==='Enter')login();});
+  document.getElementById('auth-btn').addEventListener('click',attemptAuth);
+  document.getElementById('auth-id-input').addEventListener('keydown',e=>{if(e.key==='Enter')attemptAuth();});
   document.getElementById('logout-btn').addEventListener('click',logout);
   getSessionCount();
   document.querySelectorAll('.volume-slider').forEach(s=>s.value=state.volume*100);
   document.querySelectorAll('.volume-val').forEach(v=>v.textContent=Math.round(state.volume*100)+'%');
   setTimeout(()=>{
     document.getElementById('loading').classList.add('hidden');
-    if(isAuthValid()&&localStorage.getItem('currentPlan')){showScreen('screen-home');}else{showScreen('screen-login');}
+    if(isAuthValid()&&localStorage.getItem('currentPlan')){showScreen('screen-dashboard');}else{showScreen('screen-home');}
   },1200);
 }
 document.addEventListener('DOMContentLoaded',init);
