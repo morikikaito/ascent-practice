@@ -330,7 +330,7 @@ input[type="file"] {
 
 <!-- PHASE: Resume Dialog -->
 <div id="phase-resume" class="phase">
-  <img src="images/kait.png" alt="ASCENT" style="width:240px;max-width:80%;margin:0 auto 32px;display:block;">
+  <img src="https://practice.stepbystep-ascent.com/images/kait.png" alt="ASCENT" style="width:240px;max-width:80%;margin:0 auto 32px;display:block;">
   <div class="card">
     <p style="font-size:1rem;line-height:1.8;margin-bottom:24px;color:var(--text);">前回の診断が途中で中断されています。<br>途中から再開しますか？</p>
     <button id="btn-resume" class="btn-gold" style="margin-bottom:12px;width:100%;">再開する</button>
@@ -340,7 +340,7 @@ input[type="file"] {
 
 <!-- PHASE 0: Already Diagnosed -->
 <div id="phase-diagnosed" class="phase">
-  <img src="images/kait.png" alt="ASCENT" style="width:240px;max-width:80%;margin:0 auto 32px;display:block;">
+  <img src="https://practice.stepbystep-ascent.com/images/kait.png" alt="ASCENT" style="width:240px;max-width:80%;margin:0 auto 32px;display:block;">
   <div class="card">
     <div class="diagnosed-text">動画の送信ありがとうございます！
 申し訳ありません、AIシュート診断はお一人様1回限りとなっています。
@@ -354,7 +354,7 @@ UNLEASHプランをご検討ください👇</div>
 
 <!-- PHASE 1: Video Upload -->
 <div id="phase-mediapipe" class="phase">
-  <img src="images/kait.png" alt="ASCENT" style="width:100%;max-width:480px;display:block;margin:0 auto 24px;border-radius:8px;">
+  <img src="https://practice.stepbystep-ascent.com/images/kait.png" alt="ASCENT" style="width:100%;max-width:480px;display:block;margin:0 auto 24px;border-radius:8px;">
   <div id="mp-loading-section" class="card">
     <div style="text-align:center;padding:8px 0;">
       <div style="font-family:Cinzel,serif;font-size:12px;letter-spacing:0.2em;color:var(--gold);margin-bottom:16px;">ASCENT SKELETON ANALYSIS</div>
@@ -377,7 +377,7 @@ UNLEASHプランをご検討ください👇</div>
 </div>
 
 <div id="phase-upload" class="phase">
-  <img src="images/kait.png" alt="ASCENT" style="width:240px;max-width:80%;margin:0 auto 32px;display:block;">
+  <img src="https://practice.stepbystep-ascent.com/images/kait.png" alt="ASCENT" style="width:240px;max-width:80%;margin:0 auto 32px;display:block;">
   <div class="card">
     <h2 style="font-size:1.1rem;margin-bottom:16px;text-align:center;">シュート動画をアップロード</h2>
     <div id="upload-area" class="upload-area">
@@ -398,7 +398,7 @@ UNLEASHプランをご検討ください👇</div>
 
 <!-- PHASE 2: Spec Input -->
 <div id="phase-spec" class="phase">
-  <img src="images/kait.png" alt="ASCENT" style="width:240px;max-width:80%;margin:0 auto 32px;display:block;">
+  <img src="https://practice.stepbystep-ascent.com/images/kait.png" alt="ASCENT" style="width:240px;max-width:80%;margin:0 auto 32px;display:block;">
   <div class="card">
     <div class="processing-msg" style="margin-bottom:24px;">添削素材の送信ありがとうございます！🎥✨
 AIがシュートフォームの分析を開始しました。
@@ -447,7 +447,7 @@ AIがシュートフォームの分析を開始しました。
 
 <!-- PHASE 3: Processing -->
 <div id="phase-processing" class="phase">
-  <img src="images/kait.png" alt="ASCENT" style="width:240px;max-width:80%;margin:0 auto 32px;display:block;">
+  <img src="https://practice.stepbystep-ascent.com/images/kait.png" alt="ASCENT" style="width:240px;max-width:80%;margin:0 auto 32px;display:block;">
   <div class="card" style="text-align:center;">
     <div class="spinner"></div>
     <div id="processing-text" class="processing-msg"></div>
@@ -457,7 +457,7 @@ AIがシュートフォームの分析を開始しました。
 
 <!-- PHASE 4: Questions -->
 <div id="phase-question" class="phase">
-  <img src="images/kait.png" alt="ASCENT" style="width:240px;max-width:80%;margin:0 auto 32px;display:block;">
+  <img src="https://practice.stepbystep-ascent.com/images/kait.png" alt="ASCENT" style="width:240px;max-width:80%;margin:0 auto 32px;display:block;">
   <div class="card">
     <div id="question-text" style="line-height:1.9;font-size:0.93rem;margin-bottom:20px;white-space:pre-wrap;"></div>
     <div id="choices-container"></div>
@@ -471,7 +471,7 @@ AIがシュートフォームの分析を開始しました。
 
 <!-- PHASE 5: Result -->
 <div id="phase-result" class="phase">
-  <img src="images/kait.png" alt="ASCENT" style="width:240px;max-width:80%;margin:0 auto 32px;display:block;">
+  <img src="https://practice.stepbystep-ascent.com/images/kait.png" alt="ASCENT" style="width:240px;max-width:80%;margin:0 auto 32px;display:block;">
   <div class="card">
     <div id="result-content" class="result-block"></div>
   </div>
@@ -1751,7 +1751,7 @@ async function submitAnswer() {
       responseText = data.text;
     } catch (workerErr) {
       console.warn('Worker failed, falling back to Gemini:', workerErr.message);
-      const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`;
+      const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`;
       const geminiHistory = conversationHistory.map(m => ({
         role: m.role === 'assistant' ? 'model' : m.role,
         parts: [{ text: typeof m.content === 'string' ? m.content : JSON.stringify(m.content) }]
