@@ -587,7 +587,8 @@ html, body {
    ASCENT PRACTICE v3 Phase2 — CORE LOGIC
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
 
-const WORKER_BASE = 'https://ascent-agent.moriki-beaters.workers.dev';
+/* ① プラン別パスワード */
+const PLAN_PASSWORDS = { lite: 'LITE2026', unleash: 'UNLEASH2026', pro: 'PRO2026' };
 
 const TITLE_THRESHOLDS = [
   { min: 1500, name: 'PRO' }, { min: 500, name: 'UNLEASHED' },
@@ -701,30 +702,20 @@ function selectLoginPlan(plan) {
   state.selectedPlan = plan;
   document.querySelectorAll('.plan-opt').forEach(o => o.classList.toggle('active', o.dataset.plan === plan));
 }
-async function login() {
+function login() {
   const val = document.getElementById('password-input').value.trim();
   const err = document.getElementById('login-error');
   const plan = state.selectedPlan;
-  err.textContent = '確認中...';
-  try {
-    const res = await fetch(WORKER_BASE + '/verify-access', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ plan, password: val })
-    });
-    const data = await res.json();
-    if (data.ok) {
-      err.textContent = '';
-      localStorage.setItem('ascent_auth', Date.now().toString());
-      localStorage.setItem('currentPlan', plan);
-      showScreen('screen-home');
-    } else {
-      err.textContent = 'アクセスコードが正しくありません';
-      document.getElementById('password-input').value = '';
-      document.getElementById('password-input').focus();
-    }
-  } catch (e) {
-    err.textContent = '通信エラーが発生しました';
+  const correctPw = PLAN_PASSWORDS[plan];
+  if (val === correctPw) {
+    err.textContent = '';
+    localStorage.setItem('ascent_auth', Date.now().toString());
+    localStorage.setItem('currentPlan', plan);
+    showScreen('screen-home');
+  } else {
+    err.textContent = 'アクセスコードが正しくありません';
+    document.getElementById('password-input').value = '';
+    document.getElementById('password-input').focus();
   }
 }
 function logout() {
@@ -1060,7 +1051,7 @@ function init(){
 }
 document.addEventListener('DOMContentLoaded',init);
 
-if('serviceWorker' in navigator){window.addEventListener('load',()=>{navigator.serviceWorker.register('/sw.js').then(r=>console.log('SW registered:',r.scope)).catch(e=>console.log('SW failed:',e));});}
+if('serviceWorker' in navigator){navigator.serviceWorker.getRegistrations().then(function(r){r.forEach(function(w){w.unregister()});});}
 </script>
 </body>
 </html>
