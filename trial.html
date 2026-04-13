@@ -1000,27 +1000,41 @@ async function runMediaPipeAnalysis() {
 
     if (landmarker) {
       progressEl.style.width = '60%';
-      statusEl.textContent = '関節の座標を計算しています...';
+      statusEl.textContent = '関節の座標を計算しています...[v5]';
       const results = frames.map(f => {
         if (!f) return { landmarks: [] };
         try { return landmarker.detect(f); }
         catch (e) { console.warn('detect failed:', e); return { landmarks: [] }; }
       });
-      progressEl.style.width = '80%';
-      const metrics = [
-        analyzeFrame(results[0].landmarks, 'dip'),
-        analyzeFrame(results[1].landmarks, 'setup'),
-        analyzeFrame(results[2].landmarks, 'release')
-      ];
-      mediapipeResults = { dip: metrics[0], setup: metrics[1], release: metrics[2] };
-      statusEl.textContent = 'フォーム分析を描画中...[v4]';
-      const overlays = frames.map((f, i) =>
-        f ? renderFormOverlay(f, results[i].landmarks, metrics[i].yellowJoints, metrics[i].redJoints) : null
-      );
-      progressEl.style.width = '100%';
-      frameImages = frames.map(f => f ? f.toDataURL('image/jpeg', 0.7).split(',')[1] : null);
-      displayMPResults(overlays, metrics);
+
+      const detectedCount = results.filter(r => r.landmarks && r.landmarks.length > 0 && r.landmarks[0].length > 5).length;
+      statusEl.textContent = 'MediaPipe検出: ' + detectedCount + '/3フレーム [v5]';
+
+      if (detectedCount >= 1) {
+        progressEl.style.width = '80%';
+        const metrics = [
+          analyzeFrame(results[0].landmarks, 'dip'),
+          analyzeFrame(results[1].landmarks, 'setup'),
+          analyzeFrame(results[2].landmarks, 'release')
+        ];
+        mediapipeResults = { dip: metrics[0], setup: metrics[1], release: metrics[2] };
+        statusEl.textContent = 'フォーム分析を描画中... (' + detectedCount + '/3検出)';
+        const overlays = frames.map((f, i) =>
+          f ? renderFormOverlay(f, results[i].landmarks, metrics[i].yellowJoints, metrics[i].redJoints) : null
+        );
+        progressEl.style.width = '100%';
+        frameImages = frames.map(f => f ? f.toDataURL('image/jpeg', 0.7).split(',')[1] : null);
+        displayMPResults(overlays, metrics);
+      } else {
+        statusEl.textContent = 'MediaPipeで検出できず → AIサーバー解析に切替...[v5]';
+        const serverResult = await serverPoseDetection(frames, statusEl, progressEl);
+        if (!serverResult) {
+          await extractFallbackFrames();
+        }
+        proceedToSpec();
+      }
     } else {
+      statusEl.textContent = 'MediaPipe初期化失敗 → AIサーバー解析...[v5]';
       const serverResult = await serverPoseDetection(frames, statusEl, progressEl);
       if (!serverResult) {
         await extractFallbackFrames();
