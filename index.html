@@ -551,14 +551,17 @@ html, body {
 <div class="screen" id="screen-auth">
   <div class="auth-form">
     <div class="auth-title">MEMBER LOGIN</div>
-    <div class="auth-subtitle">LINE User ID またはメールアドレスを入力してください</div>
+    <div class="auth-subtitle">ご登録時のお名前またはメールアドレスを入力してください</div>
     <div style="margin-bottom:16px">
-      <label class="form-label" for="auth-id-input">LINE USER ID / EMAIL</label>
-      <input class="form-input" type="text" id="auth-id-input" placeholder="LINE User ID またはメールアドレス" autocomplete="username">
+      <label class="form-label" for="auth-id-input">お名前 / メールアドレス</label>
+      <input class="form-input" type="text" id="auth-id-input" placeholder="例: 山田太郎 または example@mail.com" autocomplete="username">
     </div>
-    <button class="btn-primary" id="auth-btn">認証する</button>
+    <button class="btn-primary" id="auth-btn">ログイン</button>
     <div class="auth-error" id="auth-error"></div>
-    <a class="auth-fallback" onclick="showScreen('screen-login')">パスワードでログイン →</a>
+    <div class="auth-signup" id="auth-signup" style="display:none;margin-top:16px;padding:16px;background:var(--bg-elevated);border:1px solid var(--border);border-radius:8px;text-align:center;">
+      <div style="color:var(--text-muted);font-size:13px;margin-bottom:12px;line-height:1.6;">会員登録がまだの方はこちら</div>
+      <a href="https://stepbystep-ascent.com/buy.html" target="_blank" class="btn-primary" style="display:inline-block;text-decoration:none;font-size:14px;padding:14px 24px;">有料プランに申し込む →</a>
+    </div>
     <button class="auth-back" onclick="showScreen('screen-home')">← 戻る</button>
   </div>
 </div>
@@ -877,15 +880,18 @@ async function attemptAuth() {
   const val = document.getElementById('auth-id-input').value.trim();
   const err = document.getElementById('auth-error');
   const btn = document.getElementById('auth-btn');
-  if (!val) { err.textContent = 'IDまたはメールアドレスを入力してください'; return; }
+  const signup = document.getElementById('auth-signup');
+  if (!val) { err.textContent = 'お名前またはメールアドレスを入力してください'; signup.style.display = 'none'; return; }
   err.textContent = '';
-  btn.disabled = true; btn.textContent = '認証中…';
+  signup.style.display = 'none';
+  btn.disabled = true; btn.textContent = '確認中…';
   try {
     const isEmail = val.includes('@');
+    const body = isEmail ? { email: val } : { name: val };
     const res = await fetch(WORKER_BASE + '/verify-member', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ lineUid: val })
+      body: JSON.stringify(body)
     });
     const data = await res.json();
     if (data.found && data.fields) {
@@ -896,19 +902,15 @@ async function attemptAuth() {
       localStorage.setItem('ascent_auth', Date.now().toString());
       localStorage.setItem('ascent_auth_id', val);
       localStorage.setItem('currentPlan', plan);
-      if (plan === 'free') {
-        err.textContent = '無料プランです。シュートカウンターと1回限りの診断が利用できます。';
-        setTimeout(() => showScreen('screen-dashboard'), 1500);
-      } else {
-        showScreen('screen-dashboard');
-      }
+      showScreen('screen-dashboard');
     } else {
-      err.textContent = '会員情報が見つかりません。LINE User IDまたはメールアドレスをご確認ください。';
+      err.textContent = '会員情報が見つかりませんでした。';
+      signup.style.display = 'block';
     }
   } catch (e) {
     err.textContent = '通信エラーが発生しました。もう一度お試しください。';
   } finally {
-    btn.disabled = false; btn.textContent = '認証する';
+    btn.disabled = false; btn.textContent = 'ログイン';
   }
 }
 
