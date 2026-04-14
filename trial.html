@@ -1407,10 +1407,19 @@ document.addEventListener('DOMContentLoaded', async () => {
     lineUid = localStorage.getItem('ascent_trial_uid') || 'anonymous';
   }
 
+  var forceReset = params.get('reset') === '1' || modeParam === 'free';
+  if (forceReset) {
+    localStorage.removeItem('ascent_trial_used');
+    clearState();
+    userTier = 'free';
+    showPhase('phase-upload');
+    initUpload();
+    initSpecForm();
+    return;
+  }
+
   if (modeParam === 'paid' && lineUid !== 'anonymous') {
     await checkUserTier();
-  } else if (modeParam === 'free') {
-    userTier = 'free';
   } else {
     await checkUserTier();
   }
