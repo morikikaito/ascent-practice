@@ -1546,23 +1546,36 @@ function initUpload() {
 }
 
 function handleFile(file) {
-  if (!file.type.startsWith('video/')) {
-    showUploadError('動画ファイルを選択してください。');
+  var isVideo = file.type.startsWith('video/');
+  var isImage = file.type.startsWith('image/');
+  if (!isVideo && !isImage) {
+    showUploadError('\u52D5\u753B\u307E\u305F\u306F\u5199\u771F\u30D5\u30A1\u30A4\u30EB\u3092\u9078\u629E\u3057\u3066\u304F\u3060\u3055\u3044\u3002');
     return;
   }
-  const maxMB = 80;
+  var maxMB = isVideo ? 80 : 25;
   if (file.size > maxMB * 1024 * 1024) {
-    const sizeMB = Math.round(file.size / 1024 / 1024);
-    showUploadError('動画のファイルサイズが大きすぎます（' + sizeMB + 'MB）。\n30秒以内の短い動画で撮り直してみてください📱');
+    var sizeMB = Math.round(file.size / 1024 / 1024);
+    showUploadError((isVideo ? '\u52D5\u753B' : '\u5199\u771F') + '\u306E\u30D5\u30A1\u30A4\u30EB\u30B5\u30A4\u30BA\u304C\u5927\u304D\u3059\u304E\u307E\u3059\uFF08' + sizeMB + 'MB\uFF09\u3002\n' + (isVideo ? '30\u79D2\u4EE5\u5185\u306E\u77ED\u3044\u52D5\u753B\u3067\u64AE\u308A\u76F4\u3057\u3066\u307F\u3066\u304F\u3060\u3055\u3044' : '\u5225\u306E\u5199\u771F\u3067\u8A66\u3057\u3066\u307F\u3066\u304F\u3060\u3055\u3044'));
     return;
   }
-  videoFile = file;
+  mediaFile = file;
+  mediaKind = isVideo ? 'video' : 'image';
   videoMimeType = file.type;
 
   document.getElementById('file-name').textContent = file.name;
-  const preview = document.getElementById('video-preview');
-  preview.src = URL.createObjectURL(file);
-  preview.style.display = 'block';
+  var videoPreview = document.getElementById('video-preview');
+  var imagePreview = document.getElementById('image-preview');
+  if (isVideo) {
+    videoPreview.src = URL.createObjectURL(file);
+    videoPreview.style.display = 'block';
+    if (imagePreview) imagePreview.style.display = 'none';
+  } else {
+    if (imagePreview) {
+      imagePreview.src = URL.createObjectURL(file);
+      imagePreview.style.display = 'block';
+    }
+    videoPreview.style.display = 'none';
+  }
 
   document.getElementById('btn-upload').style.display = 'block';
   document.getElementById('btn-upload').disabled = false;
@@ -1586,7 +1599,7 @@ async function validateVideo() {
 
   try {
     const [base64Result] = await Promise.all([
-      fileToBase64(videoFile),
+      fileToBase64(mediaFile),
       extractEarlyFrames()
     ]);
     videoBase64 = base64Result;
