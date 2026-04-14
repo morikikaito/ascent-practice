@@ -161,3 +161,61 @@ CTAボタン：動詞始まり「今すぐ無料で〜する」
 - スケール可能か？（属人化しない仕組みか）
 - 再現性はあるか？（1回限りでないか）
 - Kaitにしかできないか？（AIに任せられるなら任せる）
+
+---
+
+## 14 進捗ログ
+
+### 2026-04-14（月）
+
+**完了済み：**
+
+1. **Perplexity MCP設定** — `~/.cursor/mcp.json` に追加、Cursor内でリアルタイム検索可能に
+2. **ascent-agent v2→v6アップグレード**
+   - 部門ルーティング追加（CEO/CMO/CTO/CPO）
+   - CPO = Perplexity API（市場調査）
+   - `/diagnose` — Claude Sonnetで診断呼び出し
+   - `/notify` — LINEプッシュ通知
+   - `/stripe-webhook` — Stripe購入→Airtableプラン自動更新
+   - `/verify-member` — 名前orメールで会員照合
+   - シークレット設定済み（PERPLEXITY_API_KEY, STRIPE_WEBHOOK_SECRET）
+3. **trial.html修正**
+   - 動画フレーム抽出修正（video.load(), 15秒タイムアウト, 空フレーム検出・リトライ）
+   - MediaPipe GPU→CPUフォールバック追加
+   - Geminiバリデーション廃止→直接MediaPipe骨格解析
+   - エラーメッセージ改善（サイズ超過 / 非バスケ動画を区別）
+4. **認証システム改善** — LINE UserID→名前orメールアドレスに変更、URLパラメータ`?uid=`自動認証対応
+5. **Stripe→Airtable自動連携** — Webhook設定、購入完了→プラン自動`true`更新
+6. **LINEアンケートボット**（ascent-line-survey）— 5問アンケート→Airtable自動保存（別セッションで構築済み）
+
+**テスト未完了（次回最優先）：**
+- Stripe Webhookの動作テスト
+- trial.htmlのClaude Sonnet経由診断（Failed to fetchが出ていた→要調査）
+- LINEボットCPO（Perplexity）動作テスト
+
+---
+
+## 15 ロードマップ
+
+**現在地：フェーズ1.5**
+
+| フェーズ | 内容 | 状態 |
+|----------|------|------|
+| 1.0 | LP・Stripe決済・LINE基盤 | ✅ 完了 |
+| 1.5 | 体験版診断（MediaPipe + Gemini/Claude）・統合トップ画面・認証・Stripe自動連携 | 🔧 テスト中 |
+| **2.0** | **本格シュート診断（骨格検出・力の漏れ可視化・フル骨格ライン描画）** | ⏳ 次の大タスク |
+
+**方針：テスト完了→フェーズ1.5で販売開始→売りながらフェーズ2を開発**
+
+### 2026-04-14（深夜）
+
+**完了済み：**
+1. **`/notify` エンドポイント**（ascent-agent）— LINE報告用。合言葉 `moriki.beaters` で `NOTIFY_SECRET` 登録済み・デプロイ済み
+2. **フェーズ1.5 骨格可視化を `trial.html` に統合** — 写真対応・白線+赤関節の骨格描画・mediaFile/mediaKind統合
+3. **JS構文エラー修正** — 文字化けで真っ黒になる問題を解消
+4. **`checkUserTier` タイムアウト追加** — `/verify-member` 未実装による画面フリーズ対策
+
+**未解決（次回最優先）：**
+- **Service Workerキャッシュ問題** — iPhoneのSafariで古い `trial.html` が表示される。`sw.js` はキャッシュ削除＋自己解除するが、iOSでは「履歴を消去」だけでは不十分。対策：`index.html` の `<head>` に SW 強制解除スクリプトを追加し、`trial.html` の `<link rel="manifest">` を削除する
+- **`/verify-member` を `ascent-agent/src/index.js` に移植** — `test.js` にはあるが `index.js` にない。ないと `checkUserTier` が毎回タイムアウトまで待つ
+- **フェーズ1.5 実機テスト** — SW問題を解消後、写真→骨格描画→スペック入力→診断の全フローをiPhone Safariで通しテスト
