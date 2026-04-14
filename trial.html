@@ -1070,7 +1070,7 @@ async function runMediaPipeAnalysis() {
             analyzeFrame(imgDet.landmarks, 'release')
           ];
           mediapipeResults = { dip: imgMetrics[0], setup: imgMetrics[1], release: imgMetrics[2] };
-          statusEl.textContent = 'フォーム分析を描画中...(静止画・同一姿勢を3観点で評価)';
+          statusEl.textContent = 'フォーム分析を描画中...（静止画・同一姿��を3�点で評��）';
           var imgOverlays = imgMetrics.map(function (m) {
             return renderFormOverlay(photoCanvas, imgDet.landmarks, m.yellowJoints, m.redJoints);
           });
@@ -1081,7 +1081,7 @@ async function runMediaPipeAnalysis() {
           displayMPResults(imgOverlays, imgMetrics);
           return;
         }
-        statusEl.textContent = 'MediaPipeで検出できず → サーバー解析...';
+        statusEl.textContent = 'MediaPipeで検出できず → サー��ー解析...';
         var imgFrames = [photoCanvas, cloneCanvas(photoCanvas), cloneCanvas(photoCanvas)];
         var imgServerOk = await serverPoseDetection(imgFrames, statusEl, progressEl);
         if (!imgServerOk) {
@@ -1090,7 +1090,7 @@ async function runMediaPipeAnalysis() {
         proceedToSpec();
         return;
       }
-      statusEl.textContent = 'MediaPipe初期化失敗 → サーバー解析...';
+      statusEl.textContent = 'MediaPipe初期化失敗 → サー��ー解析...';
       var imgFrames2 = [photoCanvas, cloneCanvas(photoCanvas), cloneCanvas(photoCanvas)];
       await serverPoseDetection(imgFrames2, statusEl, progressEl);
       proceedToSpec();
@@ -1431,11 +1431,15 @@ document.addEventListener('DOMContentLoaded', async () => {
 async function checkUserTier() {
   if (lineUid === 'anonymous') return;
   try {
+    var ctrl = new AbortController();
+    var tid = setTimeout(function () { ctrl.abort(); }, 5000);
     const res = await fetch(WORKER_BASE + '/verify-member', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ lineUid })
+      body: JSON.stringify({ lineUid }),
+      signal: ctrl.signal
     });
+    clearTimeout(tid);
     if (!res.ok) return;
     const data = await res.json();
     if (data.found) {
@@ -1522,47 +1526,24 @@ function initUpload() {
 }
 
 function handleFile(file) {
-  hideUploadError();
-  var vidEl = document.getElementById('video-preview');
-  var imgEl = document.getElementById('image-preview');
-  if (vidEl.src && vidEl.src.indexOf('blob:') === 0) {
-    try { URL.revokeObjectURL(vidEl.src); } catch (eRev) {}
-  }
-  if (imgEl.src && imgEl.src.indexOf('blob:') === 0) {
-    try { URL.revokeObjectURL(imgEl.src); } catch (eRev2) {}
-  }
-  vidEl.style.display = 'none';
-  imgEl.style.display = 'none';
-
-  if (file.type.startsWith('video/')) {
-    mediaKind = 'video';
-    var maxVidMb = 80;
-    if (file.size > maxVidMb * 1024 * 1024) {
-      var sizeMBv = Math.round(file.size / 1024 / 1024);
-      showUploadError('動画のファイルサイズが大きすぎます（' + sizeMBv + 'MB）。\n30秒以内の短い動画で撮り直してみてください📱');
-      return;
-    }
-    mediaFile = file;
-    videoMimeType = file.type;
-    vidEl.src = URL.createObjectURL(file);
-    vidEl.style.display = 'block';
-  } else if (file.type.startsWith('image/')) {
-    mediaKind = 'image';
-    var maxImgMb = 25;
-    if (file.size > maxImgMb * 1024 * 1024) {
-      showUploadError('画像のファイルサイズが大きすぎます（最大25MB）。\n別の写真で試してください。');
-      return;
-    }
-    mediaFile = file;
-    videoMimeType = file.type;
-    imgEl.src = URL.createObjectURL(file);
-    imgEl.style.display = 'block';
-  } else {
-    showUploadError('動画または画像ファイルを選択してください。');
+  if (!file.type.startsWith('video/')) {
+    showUploadError('動画ファイルを選択してください。');
     return;
   }
+  const maxMB = 80;
+  if (file.size > maxMB * 1024 * 1024) {
+    const sizeMB = Math.round(file.size / 1024 / 1024);
+    showUploadError('動画のファイルサイズが大きすぎます（' + sizeMB + 'MB）。\n30秒以内の短い動画で撮り直してみてください📱');
+    return;
+  }
+  videoFile = file;
+  videoMimeType = file.type;
 
   document.getElementById('file-name').textContent = file.name;
+  const preview = document.getElementById('video-preview');
+  preview.src = URL.createObjectURL(file);
+  preview.style.display = 'block';
+
   document.getElementById('btn-upload').style.display = 'block';
   document.getElementById('btn-upload').disabled = false;
   hideUploadError();
@@ -1581,23 +1562,18 @@ async function validateVideo() {
   const btn = document.getElementById('btn-upload');
   btn.disabled = true;
   document.getElementById('upload-spinner').style.display = 'block';
-  var spinLab = document.getElementById('upload-spinner-label');
-  if (spinLab) {
-    var lab = mediaKind === 'image' ? '画像を読み込み中' : '動画を読み込み中';
-    spinLab.innerHTML = lab + '<span class="dots"></span>';
-  }
   hideUploadError();
 
   try {
     const [base64Result] = await Promise.all([
-      fileToBase64(mediaFile),
+      fileToBase64(videoFile),
       extractEarlyFrames()
     ]);
     videoBase64 = base64Result;
     runMediaPipeAnalysis();
   } catch (e) {
     console.error(e);
-    showUploadError('ファイルの読み込みに失敗しました。\n別の動画・写真で試してみてください。');
+    showUploadError('動画の読み込みに失敗しました。\n別の動画で試してみてください📱');
     btn.disabled = false;
   } finally {
     document.getElementById('upload-spinner').style.display = 'none';
