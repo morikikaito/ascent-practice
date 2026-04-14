@@ -1064,7 +1064,7 @@ async function runMediaPipeAnalysis() {
       var imgLandmarker = await initMediaPipe();
       if (imgLandmarker) {
         progressEl.style.width = '55%';
-        statusEl.textContent�の座標を計算しています...';
+        statusEl.textContent = '\u95A2\u7BC0\u306E\u5EA7\u6A19\u3092\u8A08\u7B97\u3057\u3066\u3044\u307E\u3059...';
         var imgDet;
         try {
           imgDet = imgLandmarker.detect(photoCanvas);
@@ -1081,7 +1081,7 @@ async function runMediaPipeAnalysis() {
             analyzeFrame(imgDet.landmarks, 'release')
           ];
           mediapipeResults = { dip: imgMetrics[0], setup: imgMetrics[1], release: imgMetrics[2] };
-          statusEl.textContent = 'フォーム分析を描画中...（静止画・同一姿��を3�点で評��）';
+          statusEl.textContent = '\u30D5\u30A9\u30FC\u30E0\u5206\u6790\u3092\u63CF\u753B\u4E2D...\uFF08\u9759\u6B62\u753B\u30FB\u540C\u4E00\u59FF\u52E2\u30923\u8996\u70B9\u3067\u8A55\u4FA1\uFF09';
           var imgOverlays = imgMetrics.map(function (m) {
             return renderFormOverlay(photoCanvas, imgDet.landmarks, m.yellowJoints, m.redJoints);
           });
@@ -1092,7 +1092,7 @@ async function runMediaPipeAnalysis() {
           displayMPResults(imgOverlays, imgMetrics);
           return;
         }
-        statusEl.textContent = 'MediaPipeで検出できず → サー��ー解析...';
+        statusEl.textContent = 'MediaPipe\u3067\u691C\u51FA\u3067\u304D\u305A \u2192 \u30B5\u30FC\u30D0\u30FC\u89E3\u6790...';
         var imgFrames = [photoCanvas, cloneCanvas(photoCanvas), cloneCanvas(photoCanvas)];
         var imgServerOk = await serverPoseDetection(imgFrames, statusEl, progressEl);
         if (!imgServerOk) {
@@ -1101,7 +1101,7 @@ async function runMediaPipeAnalysis() {
         proceedToSpec();
         return;
       }
-      statusEl.textContent = 'MediaPipe初期化失敗 → サー��ー解析...';
+      statusEl.textContent = 'MediaPipe\u521D\u671F\u5316\u5931\u6557 \u2192 \u30B5\u30FC\u30D0\u30FC\u89E3\u6790...';
       var imgFrames2 = [photoCanvas, cloneCanvas(photoCanvas), cloneCanvas(photoCanvas)];
       await serverPoseDetection(imgFrames2, statusEl, progressEl);
       proceedToSpec();
