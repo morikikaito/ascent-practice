@@ -1053,7 +1053,7 @@ async function runMediaPipeAnalysis() {
       var imgLandmarker = await initMediaPipe();
       if (imgLandmarker) {
         progressEl.style.width = '55%';
-        statusEl.textContent�の座標を計算しています...';
+        statusEl.textContent = '関節の座標を計算しています...';
         var imgDet;
         try {
           imgDet = imgLandmarker.detect(photoCanvas);
@@ -1070,7 +1070,7 @@ async function runMediaPipeAnalysis() {
             analyzeFrame(imgDet.landmarks, 'release')
           ];
           mediapipeResults = { dip: imgMetrics[0], setup: imgMetrics[1], release: imgMetrics[2] };
-          statusEl.textContent = 'フォーム分析を描画中...（静止画・同一姿��を3�点で評��）';
+          statusEl.textContent = 'フォーム分析を描画中...(静止画を3観点で評価)';
           var imgOverlays = imgMetrics.map(function (m) {
             return renderFormOverlay(photoCanvas, imgDet.landmarks, m.yellowJoints, m.redJoints);
           });
@@ -1081,7 +1081,7 @@ async function runMediaPipeAnalysis() {
           displayMPResults(imgOverlays, imgMetrics);
           return;
         }
-        statusEl.textContent = 'MediaPipeで検出できず → サー��ー解析...';
+        statusEl.textContent = 'MediaPipeで検出できず → サーバー解析...';
         var imgFrames = [photoCanvas, cloneCanvas(photoCanvas), cloneCanvas(photoCanvas)];
         var imgServerOk = await serverPoseDetection(imgFrames, statusEl, progressEl);
         if (!imgServerOk) {
@@ -1090,7 +1090,7 @@ async function runMediaPipeAnalysis() {
         proceedToSpec();
         return;
       }
-      statusEl.textContent = 'MediaPipe初期化失敗 → サー��ー解析...';
+      statusEl.textContent = 'MediaPipe初期化失敗 → サーバー解析...';
       var imgFrames2 = [photoCanvas, cloneCanvas(photoCanvas), cloneCanvas(photoCanvas)];
       await serverPoseDetection(imgFrames2, statusEl, progressEl);
       proceedToSpec();
