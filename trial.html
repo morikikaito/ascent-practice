@@ -507,10 +507,10 @@ AIがシュートフォームの分析を開始しました。
 <div id="bottom-banner" class="bottom-banner">
   <a href="https://buy.stripe.com/28EcN47bXbeA8G4bMHf7i0B" class="btn-gold" target="_blank">UNLEASHプランに入会する →</a>
 </div>
-<div id="app-version" style="position:fixed;bottom:2px;right:6px;font-size:9px;color:rgba(255,255,255,0.15);z-index:9999;pointer-events:none;">v1.5.4</div>
+<div id="app-version" style="position:fixed;bottom:2px;right:6px;font-size:9px;color:rgba(255,255,255,0.15);z-index:9999;pointer-events:none;">v1.6.0</div>
 
 <script>
-console.log('[ASCENT] trial.html v1.5.4 loaded');
+console.log('[ASCENT] trial.html v1.6.0 loaded');
 // ============================================================
 // MEDIAPIPE POSE ANALYSIS
 // ============================================================
@@ -1044,8 +1044,14 @@ async function serverPoseDetection(canvasFrames, statusEl, progressEl) {
   }
 }
 
+function detectIsIOS() {
+  return /iPad|iPhone|iPod/.test(navigator.userAgent)
+    || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+}
+
 async function runMediaPipeAnalysis() {
-  console.log('[ASCENT] runMediaPipeAnalysis — mediaFile:', mediaFile, 'mediaKind:', mediaKind);
+  var _ios = detectIsIOS();
+  console.log('[ASCENT v1.6] runMediaPipeAnalysis — mediaFile:', mediaFile, 'mediaKind:', mediaKind, 'iOS:', _ios);
   showPhase('phase-mediapipe');
   const statusEl = document.getElementById('mp-status');
   const progressEl = document.getElementById('mp-progress');
@@ -1058,15 +1064,29 @@ async function runMediaPipeAnalysis() {
   try {
     if (mediaKind === 'image') {
       progressEl.style.width = '15%';
-      statusEl.textContent = '写真を読み込み中...';
+      statusEl.textContent = '\u5199\u771F\u3092\u8AAD\u307F\u8FBC\u307F\u4E2D...';
       var photoCanvas = await loadImageFileToCanvas(mediaFile);
       if (!photoCanvas) {
         showPhase('phase-upload');
-        showUploadError('画像を読み取れませんでした。\nJPEG / PNG など別の写真で試してください。');
+        showUploadError('\u753B\u50CF\u3092\u8AAD\u307F\u53D6\u308C\u307E\u305B\u3093\u3067\u3057\u305F\u3002\nJPEG / PNG \u306A\u3069\u5225\u306E\u5199\u771F\u3067\u8A66\u3057\u3066\u304F\u3060\u3055\u3044\u3002');
         return;
       }
+
+      if (_ios) {
+        console.log('[ASCENT v1.6] iOS detected -> skip MediaPipe -> Gemini direct');
+        progressEl.style.width = '30%';
+        statusEl.textContent = 'AI\u9AA8\u683C\u89E3\u6790\u4E2D...\uFF08\u30B5\u30FC\u30D0\u30FC\u51E6\u7406\uFF09';
+        var iosFrames = [photoCanvas, cloneCanvas(photoCanvas), cloneCanvas(photoCanvas)];
+        var iosServerOk = await serverPoseDetection(iosFrames, statusEl, progressEl);
+        if (!iosServerOk) {
+          await extractFallbackFrames();
+        }
+        proceedToSpec();
+        return;
+      }
+
       progressEl.style.width = '30%';
-      statusEl.textContent = 'MediaPipeを初期化しています...';
+      statusEl.textContent = 'MediaPipe\u3092\u521D\u671F\u5316\u3057\u3066\u3044\u307E\u3059...';
       var imgLandmarker = await initMediaPipe();
       if (imgLandmarker) {
         progressEl.style.width = '55%';
@@ -1114,7 +1134,7 @@ async function runMediaPipeAnalysis() {
       return;
     }
 
-    statusEl.textContent = 'フレームを抽出中...';
+    statusEl.textContent = '\u30D5\u30EC\u30FC\u30E0\u3092\u62BD\u51FA\u4E2D...';
     progressEl.style.width = '20%';
     let frames = await Promise.all(ratios.map(r => extractFrameAtTime(mediaFile, r)));
     for (let i = 0; i < frames.length; i++) {
@@ -1127,13 +1147,25 @@ async function runMediaPipeAnalysis() {
       return;
     }
 
-    statusEl.textContent = 'MediaPipeを初期化しています...';
+    if (_ios) {
+      console.log('[ASCENT v1.6] iOS detected -> skip MediaPipe -> Gemini direct (video)');
+      statusEl.textContent = 'AI\u9AA8\u683C\u89E3\u6790\u4E2D...\uFF08\u30B5\u30FC\u30D0\u30FC\u51E6\u7406\uFF09';
+      progressEl.style.width = '40%';
+      var iosVidResult = await serverPoseDetection(frames, statusEl, progressEl);
+      if (!iosVidResult) {
+        await extractFallbackFrames();
+      }
+      proceedToSpec();
+      return;
+    }
+
+    statusEl.textContent = 'MediaPipe\u3092\u521D\u671F\u5316\u3057\u3066\u3044\u307E\u3059...';
     progressEl.style.width = '30%';
     const landmarker = await initMediaPipe();
 
     if (landmarker) {
       progressEl.style.width = '60%';
-      statusEl.textContent = '関節の座標を計算しています...[v5]';
+      statusEl.textContent = '\u95A2\u7BC0\u306E\u5EA7\u6A19\u3092\u8A08\u7B97\u3057\u3066\u3044\u307E\u3059...[v1.6]';
       const results = frames.map(f => {
         if (!f) return { landmarks: [] };
         try { return landmarker.detect(f); }
@@ -1141,7 +1173,7 @@ async function runMediaPipeAnalysis() {
       });
 
       const detectedCount = results.filter(r => r.landmarks && r.landmarks.length > 0 && r.landmarks[0].length > 5).length;
-      statusEl.textContent = 'MediaPipe検出: ' + detectedCount + '/3フレーム [v5]';
+      statusEl.textContent = 'MediaPipe\u691C\u51FA: ' + detectedCount + '/3\u30D5\u30EC\u30FC\u30E0 [v1.6]';
 
       if (detectedCount >= 1) {
         progressEl.style.width = '80%';
@@ -1151,7 +1183,7 @@ async function runMediaPipeAnalysis() {
           analyzeFrame(results[2].landmarks, 'release')
         ];
         mediapipeResults = { dip: metrics[0], setup: metrics[1], release: metrics[2] };
-        statusEl.textContent = 'フォーム分析を描画中... (' + detectedCount + '/3検出)';
+        statusEl.textContent = '\u30D5\u30A9\u30FC\u30E0\u5206\u6790\u3092\u63CF\u753B\u4E2D... (' + detectedCount + '/3\u691C\u51FA)';
         const overlays = frames.map((f, i) =>
           f ? renderFormOverlay(f, results[i].landmarks, metrics[i].yellowJoints, metrics[i].redJoints) : null
         );
@@ -1159,7 +1191,7 @@ async function runMediaPipeAnalysis() {
         frameImages = frames.map(f => f ? f.toDataURL('image/jpeg', 0.7).split(',')[1] : null);
         displayMPResults(overlays, metrics);
       } else {
-        statusEl.textContent = 'MediaPipeで検出できず → AIサーバー解析に切替...[v5]';
+        statusEl.textContent = 'MediaPipe\u3067\u691C\u51FA\u3067\u304D\u305A \u2192 AI\u30B5\u30FC\u30D0\u30FC\u89E3\u6790\u306B\u5207\u66FF...[v1.6]';
         const serverResult = await serverPoseDetection(frames, statusEl, progressEl);
         if (!serverResult) {
           await extractFallbackFrames();
@@ -1167,7 +1199,7 @@ async function runMediaPipeAnalysis() {
         proceedToSpec();
       }
     } else {
-      statusEl.textContent = 'MediaPipe初期化失敗 → AIサーバー解析...[v5]';
+      statusEl.textContent = 'MediaPipe\u521D\u671F\u5316\u5931\u6557 \u2192 AI\u30B5\u30FC\u30D0\u30FC\u89E3\u6790...[v1.6]';
       const serverResult = await serverPoseDetection(frames, statusEl, progressEl);
       if (!serverResult) {
         await extractFallbackFrames();
@@ -1403,7 +1435,7 @@ function showPhase(id) {
 // INIT
 // ============================================================
 document.addEventListener('DOMContentLoaded', async () => {
-  console.log('[ASCENT] DOMContentLoaded v1.5.4 — mode=' + new URLSearchParams(window.location.search).get('mode'));
+  console.log('[ASCENT] DOMContentLoaded v1.6.0 — mode=' + new URLSearchParams(window.location.search).get('mode'));
   const params = new URLSearchParams(window.location.search);
   const uidParam = params.get('uid');
   const modeParam = params.get('mode');
