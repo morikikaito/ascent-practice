@@ -507,10 +507,10 @@ AIがシュートフォームの分析を開始しました。
 <div id="bottom-banner" class="bottom-banner">
   <a href="https://buy.stripe.com/28EcN47bXbeA8G4bMHf7i0B" class="btn-gold" target="_blank">UNLEASHプランに入会する →</a>
 </div>
-<div id="app-version" style="position:fixed;bottom:2px;right:6px;font-size:9px;color:rgba(255,255,255,0.15);z-index:9999;pointer-events:none;">v1.8.2</div>
+<div id="app-version" style="position:fixed;bottom:2px;right:6px;font-size:9px;color:rgba(255,255,255,0.15);z-index:9999;pointer-events:none;">v1.8.1</div>
 
 <script>
-console.log('[ASCENT] trial.html v1.8.2 loaded');
+console.log('[ASCENT] trial.html v1.8.1 loaded');
 // ============================================================
 // MEDIAPIPE POSE ANALYSIS
 // ============================================================
@@ -1107,23 +1107,15 @@ async function serverPoseDetection(canvasFrames, statusEl, progressEl, mode) {
     statusEl.textContent = 'AI骨格解析中...（' + POSE_ENGINE + '）';
     progressEl.style.width = '50%';
 
-    var fetchTimeout = POSE_ENGINE === 'claude' ? 35000 : 25000;
-    var abortCtrl = new AbortController();
-    var fetchTimer = setTimeout(function() { abortCtrl.abort(); }, fetchTimeout);
-
     const res = await fetch(DETECT_POSE_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ frames: base64Frames }),
-      signal: abortCtrl.signal
+      body: JSON.stringify({ frames: base64Frames })
     });
-    clearTimeout(fetchTimer);
 
     if (!res.ok) {
       const errText = await res.text().catch(() => '');
-      var errDetail = errText.substring(0, 200);
-      try { var errJson = JSON.parse(errText); errDetail = (errJson.error || '') + ' [step:' + (errJson.step || '?') + ']'; } catch(e) {}
-      throw new Error('Server ' + res.status + ': ' + errDetail);
+      throw new Error('Server ' + res.status + ': ' + errText.substring(0, 100));
     }
 
     const data = await res.json();
@@ -1184,9 +1176,8 @@ async function serverPoseDetection(canvasFrames, statusEl, progressEl, mode) {
     return true;
   } catch (e) {
     console.error('Server pose detection failed:', e);
-    var errMsg = e.name === 'AbortError' ? 'タイムアウト（' + (fetchTimeout/1000) + '秒超過）' : e.message;
-    _lastPoseDebugInfo = '<span style="color:#f44;">FAIL[' + POSE_ENGINE + ']:</span> ' + errMsg.substring(0, 200);
-    statusEl.textContent = '骨格検出エラー: ' + errMsg.substring(0, 80);
+    _lastPoseDebugInfo = '<span style="color:#f44;">FAIL:</span> ' + e.message.substring(0, 150);
+    statusEl.textContent = '骨格検出エラー: ' + e.message.substring(0, 80);
 
     skeletonFrameDataUrls = [];
     canvasFrames.forEach((canvas, i) => {
@@ -1235,7 +1226,7 @@ async function runMediaPipeAnalysis() {
       }
 
       if (_ios) {
-        console.log('[ASCENT v1.8.2] iOS detected -> skip MediaPipe -> Gemini direct');
+        console.log('[ASCENT v1.8.1] iOS detected -> skip MediaPipe -> Gemini direct');
         progressEl.style.width = '30%';
         statusEl.textContent = 'AI\u9AA8\u683C\u89E3\u6790\u4E2D...\uFF08\u30B5\u30FC\u30D0\u30FC\u51E6\u7406\uFF09';
         var iosFrames = [photoCanvas];
@@ -1314,7 +1305,7 @@ async function runMediaPipeAnalysis() {
     }
 
     if (_ios) {
-      console.log('[ASCENT v1.8.2] iOS detected -> skip MediaPipe -> Gemini direct (video)');
+      console.log('[ASCENT v1.8.1] iOS detected -> skip MediaPipe -> Gemini direct (video)');
       statusEl.textContent = 'AI\u9AA8\u683C\u89E3\u6790\u4E2D...\uFF08\u30B5\u30FC\u30D0\u30FC\u51E6\u7406\uFF09';
       progressEl.style.width = '40%';
       var iosVidResult = await serverPoseDetection(frames, statusEl, progressEl, 'video');
@@ -1609,7 +1600,7 @@ function showPhase(id) {
 // INIT
 // ============================================================
 document.addEventListener('DOMContentLoaded', async () => {
-  console.log('[ASCENT] DOMContentLoaded v1.8.2 — mode=' + new URLSearchParams(window.location.search).get('mode'));
+  console.log('[ASCENT] DOMContentLoaded v1.8.1 — mode=' + new URLSearchParams(window.location.search).get('mode'));
   const params = new URLSearchParams(window.location.search);
   const uidParam = params.get('uid');
   const modeParam = params.get('mode');
