@@ -507,10 +507,10 @@ AIがシュートフォームの分析を開始しました。
 <div id="bottom-banner" class="bottom-banner">
   <a href="https://buy.stripe.com/28EcN47bXbeA8G4bMHf7i0B" class="btn-gold" target="_blank">UNLEASHプランに入会する →</a>
 </div>
-<div id="app-version" style="position:fixed;bottom:2px;right:6px;font-size:9px;color:rgba(255,255,255,0.15);z-index:9999;pointer-events:none;">v1.6.0</div>
+<div id="app-version" style="position:fixed;bottom:2px;right:6px;font-size:9px;color:rgba(255,255,255,0.15);z-index:9999;pointer-events:none;">v1.6.1</div>
 
 <script>
-console.log('[ASCENT] trial.html v1.6.0 loaded');
+console.log('[ASCENT] trial.html v1.6.1 loaded');
 // ============================================================
 // MEDIAPIPE POSE ANALYSIS
 // ============================================================
@@ -847,6 +847,37 @@ function displayMPResults(canvases, metrics) {
   document.getElementById('mp-results-section').style.display = 'block';
 }
 
+function displayServerResults() {
+  if (skeletonFrameDataUrls.length === 0) return false;
+  var framesEl = document.getElementById('mp-frames');
+  framesEl.innerHTML = '';
+  var totalErr = 0, totalWarn = 0, totalLm = 0;
+  skeletonFrameDataUrls.forEach(function(f) {
+    totalErr += (f.errorCount || 0);
+    totalWarn += (f.warnCount || 0);
+    totalLm += (f.landmarks || []).length;
+    var borderColor = f.errorCount > 0 ? 'rgba(255,68,68,0.6)' : f.warnCount > 0 ? 'rgba(255,215,0,0.5)' : 'var(--border)';
+    var headerColor = f.errorCount > 0 ? '#FF6666' : f.warnCount > 0 ? 'var(--gold)' : 'var(--text-muted)';
+    var badges = '';
+    if (f.errorCount > 0) badges += '<span style="background:#FF4444;color:#fff;padding:1px 6px;border-radius:8px;font-size:8px;margin-left:4px;">&#x26A0; ' + f.errorCount + '</span>';
+    if (f.warnCount > 0) badges += '<span style="background:#CC9900;color:#fff;padding:1px 6px;border-radius:8px;font-size:8px;margin-left:4px;">&#x25B2; ' + f.warnCount + '</span>';
+    var div = document.createElement('div');
+    div.style.cssText = 'margin-bottom:14px;background:var(--bg-card);border:1px solid '+borderColor+';border-radius:12px;overflow:hidden;';
+    div.innerHTML = '<div style="padding:10px 14px;font-family:Cinzel,serif;font-size:11px;letter-spacing:0.15em;color:'+headerColor+';display:flex;justify-content:space-between;align-items:center;">'
+      +'<span>'+f.label+'</span><span style="display:flex;align-items:center;font-size:10px;">'+badges+'</span></div>'
+      +'<img src="'+f.src+'" class="skeleton-frame-img" alt="\u9AA8\u683C\u89E3\u6790">';
+    framesEl.appendChild(div);
+  });
+  document.getElementById('mp-metrics').innerHTML =
+    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:16px;">'
+    +'<div style="background:var(--bg-card);border:1px solid rgba(255,68,68,0.3);border-radius:8px;padding:10px;text-align:center;"><div style="font-family:\'Cormorant Garamond\',serif;font-size:22px;font-weight:700;color:#FF6666;">'+totalErr+'</div><div style="font-size:8px;color:var(--text-muted);margin-top:3px;">\uD83D\uDD34 \u30A8\u30E9\u30FC</div></div>'
+    +'<div style="background:var(--bg-card);border:1px solid rgba(255,215,0,0.3);border-radius:8px;padding:10px;text-align:center;"><div style="font-family:\'Cormorant Garamond\',serif;font-size:22px;font-weight:700;color:#FFD700;">'+totalWarn+'</div><div style="font-size:8px;color:var(--text-muted);margin-top:3px;">\uD83D\uDFE1 \u6CE8\u610F</div></div>'
+    +'</div>';
+  document.getElementById('mp-loading-section').style.display = 'none';
+  document.getElementById('mp-results-section').style.display = 'block';
+  return true;
+}
+
 function applyBlueFilter(canvas) {
   const ctx = canvas.getContext('2d');
   ctx.fillStyle = 'rgba(30, 60, 120, 0.35)';
@@ -1073,13 +1104,16 @@ async function runMediaPipeAnalysis() {
       }
 
       if (_ios) {
-        console.log('[ASCENT v1.6] iOS detected -> skip MediaPipe -> Gemini direct');
+        console.log('[ASCENT v1.6.1] iOS detected -> skip MediaPipe -> Gemini direct');
         progressEl.style.width = '30%';
         statusEl.textContent = 'AI\u9AA8\u683C\u89E3\u6790\u4E2D...\uFF08\u30B5\u30FC\u30D0\u30FC\u51E6\u7406\uFF09';
         var iosFrames = [photoCanvas, cloneCanvas(photoCanvas), cloneCanvas(photoCanvas)];
         var iosServerOk = await serverPoseDetection(iosFrames, statusEl, progressEl);
         if (!iosServerOk) {
           await extractFallbackFrames();
+        }
+        if (displayServerResults()) {
+          return;
         }
         proceedToSpec();
         return;
@@ -1148,12 +1182,15 @@ async function runMediaPipeAnalysis() {
     }
 
     if (_ios) {
-      console.log('[ASCENT v1.6] iOS detected -> skip MediaPipe -> Gemini direct (video)');
+      console.log('[ASCENT v1.6.1] iOS detected -> skip MediaPipe -> Gemini direct (video)');
       statusEl.textContent = 'AI\u9AA8\u683C\u89E3\u6790\u4E2D...\uFF08\u30B5\u30FC\u30D0\u30FC\u51E6\u7406\uFF09';
       progressEl.style.width = '40%';
       var iosVidResult = await serverPoseDetection(frames, statusEl, progressEl);
       if (!iosVidResult) {
         await extractFallbackFrames();
+      }
+      if (displayServerResults()) {
+        return;
       }
       proceedToSpec();
       return;
@@ -1435,7 +1472,7 @@ function showPhase(id) {
 // INIT
 // ============================================================
 document.addEventListener('DOMContentLoaded', async () => {
-  console.log('[ASCENT] DOMContentLoaded v1.6.0 — mode=' + new URLSearchParams(window.location.search).get('mode'));
+  console.log('[ASCENT] DOMContentLoaded v1.6.1 — mode=' + new URLSearchParams(window.location.search).get('mode'));
   const params = new URLSearchParams(window.location.search);
   const uidParam = params.get('uid');
   const modeParam = params.get('mode');
