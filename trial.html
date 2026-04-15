@@ -507,10 +507,10 @@ AIがシュートフォームの分析を開始しました。
 <div id="bottom-banner" class="bottom-banner">
   <a href="https://buy.stripe.com/28EcN47bXbeA8G4bMHf7i0B" class="btn-gold" target="_blank">UNLEASHプランに入会する →</a>
 </div>
-<div id="app-version" style="position:fixed;bottom:2px;right:6px;font-size:9px;color:rgba(255,255,255,0.15);z-index:9999;pointer-events:none;">v1.8.0</div>
+<div id="app-version" style="position:fixed;bottom:2px;right:6px;font-size:9px;color:rgba(255,255,255,0.15);z-index:9999;pointer-events:none;">v1.8.1</div>
 
 <script>
-console.log('[ASCENT] trial.html v1.8.0 loaded');
+console.log('[ASCENT] trial.html v1.8.1 loaded');
 // ============================================================
 // MEDIAPIPE POSE ANALYSIS
 // ============================================================
@@ -1104,10 +1104,10 @@ async function serverPoseDetection(canvasFrames, statusEl, progressEl, mode) {
   console.log('[detect-pose] Sending ' + base64Frames.length + ' frames, sizes: ' + base64Frames.map(f => Math.round(f.length/1024) + 'KB').join(', '));
 
   try {
-    statusEl.textContent = 'AI骨格解析中...（画像送信中）[v3]';
+    statusEl.textContent = 'AI骨格解析中...（' + POSE_ENGINE + '）';
     progressEl.style.width = '50%';
 
-    const res = await fetch(WORKER_BASE + '/detect-pose', {
+    const res = await fetch(DETECT_POSE_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ frames: base64Frames })
@@ -1167,9 +1167,10 @@ async function serverPoseDetection(canvasFrames, statusEl, progressEl, mode) {
     var totalLm = skeletonFrameDataUrls.reduce(function(s, f){ return s + (f.landmarks||[]).length; }, 0);
     var totalErr = skeletonFrameDataUrls.reduce(function(s, f){ return s + (f.errorCount||0); }, 0);
     var totalWarn = skeletonFrameDataUrls.reduce(function(s, f){ return s + (f.warnCount||0); }, 0);
-    _lastPoseDebugInfo = 'OK model=' + dbgModel + ' frames=' + dbgFrameCount + ' lm=' + totalLm
-      + ' sample=' + (data._debug?.sampleLandmark ? JSON.stringify(data._debug.sampleLandmark) : 'none')
-      + ' counts=' + JSON.stringify(data._debug?.statusCounts || {});
+    var dbgEngine = data._debug?.engine || POSE_ENGINE;
+    var dbgLatency = data._debug?.latencyMs || '?';
+    _lastPoseDebugInfo = '<b>' + dbgEngine.toUpperCase() + '</b> model=' + dbgModel + ' ' + dbgLatency + 'ms | frames=' + dbgFrameCount + ' lm=' + totalLm
+      + ' | counts=' + JSON.stringify(data._debug?.statusCounts || {});
     statusEl.textContent = '骨格解析完了！ ' + drawnCount + 'フレーム / ' + totalLm + '関節検出 / 🔴' + totalErr + ' 🟡' + totalWarn;
 
     return true;
@@ -1225,7 +1226,7 @@ async function runMediaPipeAnalysis() {
       }
 
       if (_ios) {
-        console.log('[ASCENT v1.8.0] iOS detected -> skip MediaPipe -> Gemini direct');
+        console.log('[ASCENT v1.8.1] iOS detected -> skip MediaPipe -> Gemini direct');
         progressEl.style.width = '30%';
         statusEl.textContent = 'AI\u9AA8\u683C\u89E3\u6790\u4E2D...\uFF08\u30B5\u30FC\u30D0\u30FC\u51E6\u7406\uFF09';
         var iosFrames = [photoCanvas];
@@ -1304,7 +1305,7 @@ async function runMediaPipeAnalysis() {
     }
 
     if (_ios) {
-      console.log('[ASCENT v1.8.0] iOS detected -> skip MediaPipe -> Gemini direct (video)');
+      console.log('[ASCENT v1.8.1] iOS detected -> skip MediaPipe -> Gemini direct (video)');
       statusEl.textContent = 'AI\u9AA8\u683C\u89E3\u6790\u4E2D...\uFF08\u30B5\u30FC\u30D0\u30FC\u51E6\u7406\uFF09';
       progressEl.style.width = '40%';
       var iosVidResult = await serverPoseDetection(frames, statusEl, progressEl, 'video');
@@ -1427,6 +1428,9 @@ function proceedToSpec() {
 const WORKER_BASE = 'https://ascent-agent.moriki-beaters.workers.dev';
 const DIAGNOSE_ENDPOINT = WORKER_BASE + '/diagnose';
 const SAVE_ENDPOINT = WORKER_BASE + '/save-diagnosis';
+var POSE_ENGINE = new URLSearchParams(window.location.search).get('engine') || 'gemini';
+var DETECT_POSE_URL = WORKER_BASE + (POSE_ENGINE === 'claude' ? '/detect-pose-claude' : '/detect-pose');
+console.log('[ASCENT] Pose engine: ' + POSE_ENGINE + ' -> ' + DETECT_POSE_URL);
 const UNLEASH_URL = 'https://buy.stripe.com/28EcN47bXbeA8G4bMHf7i0B';
 const AIRTABLE_TABLE_CUSTOMERS = 'tblI9tweL01ALYll9';
 const AIRTABLE_TABLE_DIAGNOSIS = 'tblw7UmDwboYb4P1O';
@@ -1596,7 +1600,7 @@ function showPhase(id) {
 // INIT
 // ============================================================
 document.addEventListener('DOMContentLoaded', async () => {
-  console.log('[ASCENT] DOMContentLoaded v1.8.0 — mode=' + new URLSearchParams(window.location.search).get('mode'));
+  console.log('[ASCENT] DOMContentLoaded v1.8.1 — mode=' + new URLSearchParams(window.location.search).get('mode'));
   const params = new URLSearchParams(window.location.search);
   const uidParam = params.get('uid');
   const modeParam = params.get('mode');
