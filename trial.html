@@ -507,10 +507,10 @@ AIがシュートフォームの分析を開始しました。
 <div id="bottom-banner" class="bottom-banner">
   <a href="https://buy.stripe.com/28EcN47bXbeA8G4bMHf7i0B" class="btn-gold" target="_blank">UNLEASHプランに入会する →</a>
 </div>
-<div id="app-version" style="position:fixed;bottom:2px;right:6px;font-size:9px;color:rgba(255,255,255,0.15);z-index:9999;pointer-events:none;">v1.7.1</div>
+<div id="app-version" style="position:fixed;bottom:2px;right:6px;font-size:9px;color:rgba(255,255,255,0.15);z-index:9999;pointer-events:none;">v1.8.0</div>
 
 <script>
-console.log('[ASCENT] trial.html v1.7.1 loaded');
+console.log('[ASCENT] trial.html v1.8.0 loaded');
 // ============================================================
 // MEDIAPIPE POSE ANALYSIS
 // ============================================================
@@ -891,17 +891,35 @@ function applyBlueFilter(canvas) {
 }
 
 const SKELETON_CONNECTIONS = [
-  ['LEFT_SHOULDER','RIGHT_SHOULDER'],['LEFT_SHOULDER','LEFT_ELBOW'],['LEFT_ELBOW','LEFT_WRIST'],
-  ['RIGHT_SHOULDER','RIGHT_ELBOW'],['RIGHT_ELBOW','RIGHT_WRIST'],['LEFT_SHOULDER','LEFT_HIP'],
-  ['RIGHT_SHOULDER','RIGHT_HIP'],['LEFT_HIP','RIGHT_HIP'],['LEFT_HIP','LEFT_KNEE'],
-  ['LEFT_KNEE','LEFT_ANKLE'],['RIGHT_HIP','RIGHT_KNEE'],['RIGHT_KNEE','RIGHT_ANKLE'],
-  ['NOSE','LEFT_SHOULDER'],['NOSE','RIGHT_SHOULDER']
+  { from: 'NOSE', to: 'LEFT_SHOULDER', part: 'neck' },
+  { from: 'NOSE', to: 'RIGHT_SHOULDER', part: 'neck' },
+  { from: 'LEFT_SHOULDER', to: 'RIGHT_SHOULDER', part: 'torso' },
+  { from: 'LEFT_SHOULDER', to: 'LEFT_HIP', part: 'torso' },
+  { from: 'RIGHT_SHOULDER', to: 'RIGHT_HIP', part: 'torso' },
+  { from: 'LEFT_HIP', to: 'RIGHT_HIP', part: 'torso' },
+  { from: 'LEFT_SHOULDER', to: 'LEFT_ELBOW', part: 'left_arm' },
+  { from: 'LEFT_ELBOW', to: 'LEFT_WRIST', part: 'left_arm' },
+  { from: 'RIGHT_SHOULDER', to: 'RIGHT_ELBOW', part: 'right_arm' },
+  { from: 'RIGHT_ELBOW', to: 'RIGHT_WRIST', part: 'right_arm' },
+  { from: 'LEFT_HIP', to: 'LEFT_KNEE', part: 'left_leg' },
+  { from: 'LEFT_KNEE', to: 'LEFT_ANKLE', part: 'left_leg' },
+  { from: 'RIGHT_HIP', to: 'RIGHT_KNEE', part: 'right_leg' },
+  { from: 'RIGHT_KNEE', to: 'RIGHT_ANKLE', part: 'right_leg' }
 ];
 
-function getJointColor(status) {
-  if (status === 'error') return { fill: '#FF4444', stroke: '#CC0000', shadow: 'rgba(255,68,68,0.9)', glow: 18 };
-  if (status === 'warning') return { fill: '#FFD700', stroke: '#CC9900', shadow: 'rgba(255,215,0,0.9)', glow: 14 };
-  return { fill: '#E53935', stroke: '#B71C1C', shadow: 'rgba(229,57,53,0.7)', glow: 8 };
+var PART_COLORS = {
+  neck: { line: 'rgba(180,220,255,0.9)', outline: 'rgba(40,60,100,0.8)' },
+  torso: { line: 'rgba(100,200,255,0.9)', outline: 'rgba(20,60,120,0.8)' },
+  left_arm: { line: 'rgba(0,230,180,0.9)', outline: 'rgba(0,80,60,0.8)' },
+  right_arm: { line: 'rgba(0,200,255,0.9)', outline: 'rgba(0,60,100,0.8)' },
+  left_leg: { line: 'rgba(180,130,255,0.9)', outline: 'rgba(60,30,100,0.8)' },
+  right_leg: { line: 'rgba(130,180,255,0.9)', outline: 'rgba(30,50,100,0.8)' }
+};
+
+function getSegmentColor(sa, sb) {
+  if (sa === 'error' || sb === 'error') return { line: 'rgba(255,80,80,0.95)', outline: 'rgba(120,0,0,0.9)' };
+  if (sa === 'warning' || sb === 'warning') return { line: 'rgba(255,220,60,0.95)', outline: 'rgba(120,90,0,0.9)' };
+  return null;
 }
 
 function drawSkeletonOnCanvas(canvas, landmarks) {
@@ -909,57 +927,147 @@ function drawSkeletonOnCanvas(canvas, landmarks) {
   var w = canvas.width, h = canvas.height;
   var lmMap = {};
   landmarks.forEach(function(lm) { lmMap[lm.name || lm.landmark] = lm; });
-
-  var lw = Math.max(4, Math.round(w / 80));
   ctx.lineCap = 'round';
   ctx.lineJoin = 'round';
 
-  SKELETON_CONNECTIONS.forEach(function(pair) {
-    var la = lmMap[pair[0]], lb = lmMap[pair[1]];
-    if (la && lb && la.x != null && la.y != null && lb.x != null && lb.y != null) {
-      ctx.strokeStyle = 'rgba(255,255,255,0.92)';
-      ctx.lineWidth = lw;
-      ctx.shadowColor = 'rgba(255,255,255,0.5)';
-      ctx.shadowBlur = 6;
-      ctx.beginPath();
-      ctx.moveTo(la.x * w, la.y * h);
-      ctx.lineTo(lb.x * w, lb.y * h);
-      ctx.stroke();
-    }
-  });
-  ctx.shadowBlur = 0;
+  var baseW = Math.max(5, Math.round(w / 55));
+  var outlineW = baseW + 4;
 
-  var r = Math.max(6, Math.round(w / 60));
+  var torsoPoints = ['LEFT_SHOULDER','RIGHT_SHOULDER','RIGHT_HIP','LEFT_HIP'].map(function(n) { return lmMap[n]; });
+  if (torsoPoints.every(function(p) { return p && p.x != null && p.y != null; })) {
+    ctx.beginPath();
+    ctx.moveTo(torsoPoints[0].x * w, torsoPoints[0].y * h);
+    for (var ti = 1; ti < torsoPoints.length; ti++) {
+      ctx.lineTo(torsoPoints[ti].x * w, torsoPoints[ti].y * h);
+    }
+    ctx.closePath();
+    ctx.fillStyle = 'rgba(60,140,220,0.15)';
+    ctx.fill();
+  }
+
+  SKELETON_CONNECTIONS.forEach(function(conn) {
+    var la = lmMap[conn.from], lb = lmMap[conn.to];
+    if (!la || !lb || la.x == null || la.y == null || lb.x == null || lb.y == null) return;
+    var sc = getSegmentColor(la.s, lb.s);
+    var pc = PART_COLORS[conn.part] || PART_COLORS.torso;
+    var lineCol = sc ? sc.line : pc.line;
+    var outCol = sc ? sc.outline : pc.outline;
+    ctx.strokeStyle = outCol;
+    ctx.lineWidth = outlineW;
+    ctx.shadowColor = 'rgba(0,0,0,0.6)';
+    ctx.shadowBlur = 4;
+    ctx.beginPath();
+    ctx.moveTo(la.x * w, la.y * h);
+    ctx.lineTo(lb.x * w, lb.y * h);
+    ctx.stroke();
+    ctx.shadowBlur = 0;
+    ctx.strokeStyle = lineCol;
+    ctx.lineWidth = baseW;
+    ctx.beginPath();
+    ctx.moveTo(la.x * w, la.y * h);
+    ctx.lineTo(lb.x * w, lb.y * h);
+    ctx.stroke();
+  });
+
+  var nose = lmMap['NOSE'];
+  if (nose && nose.x != null && nose.y != null) {
+    var ls = lmMap['LEFT_SHOULDER'], rs = lmMap['RIGHT_SHOULDER'];
+    var headR;
+    if (ls && rs && ls.x != null && rs.x != null) {
+      var shoulderDist = Math.sqrt(Math.pow((ls.x - rs.x) * w, 2) + Math.pow((ls.y - rs.y) * h, 2));
+      headR = Math.max(12, shoulderDist * 0.4);
+    } else {
+      headR = Math.max(12, w / 25);
+    }
+    ctx.beginPath();
+    ctx.arc(nose.x * w, nose.y * h, headR, 0, 2 * Math.PI);
+    ctx.fillStyle = 'rgba(60,140,220,0.2)';
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(180,220,255,0.9)';
+    ctx.lineWidth = 3;
+    ctx.shadowColor = 'rgba(0,0,0,0.5)';
+    ctx.shadowBlur = 3;
+    ctx.stroke();
+    ctx.shadowBlur = 0;
+  }
+
+  var jointR = Math.max(5, Math.round(w / 70));
   landmarks.forEach(function(lm) {
-    if (lm.x != null && lm.y != null) {
-      var s = lm.s || 'good';
-      var c = getJointColor(s);
+    if (lm.x == null || lm.y == null) return;
+    if ((lm.name || lm.landmark) === 'NOSE') return;
+    var s = lm.s || 'good';
+    var px = lm.x * w, py = lm.y * h;
+    if (s === 'error') {
       ctx.beginPath();
-      ctx.arc(lm.x * w, lm.y * h, r, 0, 2 * Math.PI);
-      ctx.fillStyle = c.fill;
-      ctx.shadowColor = c.shadow;
-      ctx.shadowBlur = c.glow;
+      ctx.arc(px, py, jointR * 2.5, 0, 2 * Math.PI);
+      ctx.strokeStyle = 'rgba(255,60,60,0.5)';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.arc(px, py, jointR, 0, 2 * Math.PI);
+      ctx.fillStyle = '#FF4444';
+      ctx.shadowColor = 'rgba(255,0,0,0.8)';
+      ctx.shadowBlur = 12;
       ctx.fill();
-      ctx.strokeStyle = c.stroke;
+      ctx.strokeStyle = '#CC0000';
       ctx.lineWidth = 2;
       ctx.stroke();
       ctx.shadowBlur = 0;
-
-      if (s === 'error') {
-        ctx.beginPath();
-        ctx.arc(lm.x * w, lm.y * h, r * 2.2, 0, 2 * Math.PI);
-        ctx.strokeStyle = 'rgba(255,68,68,0.7)';
-        ctx.lineWidth = 3;
-        ctx.stroke();
-      } else if (s === 'warning') {
-        ctx.beginPath();
-        ctx.arc(lm.x * w, lm.y * h, r * 2, 0, 2 * Math.PI);
-        ctx.strokeStyle = 'rgba(255,215,0,0.6)';
-        ctx.lineWidth = 2.5;
-        ctx.stroke();
-      }
+    } else if (s === 'warning') {
+      ctx.beginPath();
+      ctx.arc(px, py, jointR * 2, 0, 2 * Math.PI);
+      ctx.strokeStyle = 'rgba(255,200,0,0.4)';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.arc(px, py, jointR, 0, 2 * Math.PI);
+      ctx.fillStyle = '#FFD700';
+      ctx.shadowColor = 'rgba(255,200,0,0.8)';
+      ctx.shadowBlur = 10;
+      ctx.fill();
+      ctx.strokeStyle = '#CC9900';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+      ctx.shadowBlur = 0;
+    } else {
+      ctx.beginPath();
+      ctx.arc(px, py, jointR * 0.7, 0, 2 * Math.PI);
+      ctx.fillStyle = 'rgba(200,230,255,0.8)';
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(100,160,220,0.6)';
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
     }
   });
+
+  var issues = landmarks.filter(function(lm) { return lm.s === 'error' || lm.s === 'warning'; });
+  if (issues.length > 0) {
+    var labelSize = Math.max(9, Math.round(w / 45));
+    ctx.font = 'bold ' + labelSize + 'px sans-serif';
+    ctx.textAlign = 'left';
+    var JP_NAMES = {
+      NOSE: '\u982D', LEFT_SHOULDER: '\u5DE6\u80A9', RIGHT_SHOULDER: '\u53F3\u80A9',
+      LEFT_ELBOW: '\u5DE6\u8098', RIGHT_ELBOW: '\u53F3\u8098', LEFT_WRIST: '\u5DE6\u624B\u9996', RIGHT_WRIST: '\u53F3\u624B\u9996',
+      LEFT_HIP: '\u5DE6\u8170', RIGHT_HIP: '\u53F3\u8170', LEFT_KNEE: '\u5DE6\u819D', RIGHT_KNEE: '\u53F3\u819D',
+      LEFT_ANKLE: '\u5DE6\u8DB3', RIGHT_ANKLE: '\u53F3\u8DB3'
+    };
+    issues.forEach(function(lm) {
+      var px = lm.x * w, py = lm.y * h;
+      var name = JP_NAMES[lm.name || lm.landmark] || lm.name;
+      var icon = lm.s === 'error' ? '\u26A0' : '\u25B2';
+      var txt = icon + ' ' + name;
+      var offX = (lm.x > 0.5) ? -(labelSize * 3.5) : (jointR * 2.5 + 4);
+      var offY = -jointR - 4;
+      ctx.fillStyle = lm.s === 'error' ? 'rgba(80,0,0,0.75)' : 'rgba(80,60,0,0.75)';
+      var tw = ctx.measureText(txt).width;
+      ctx.beginPath();
+      ctx.roundRect(px + offX - 4, py + offY - labelSize, tw + 8, labelSize + 6, 4);
+      ctx.fill();
+      ctx.fillStyle = lm.s === 'error' ? '#FF6666' : '#FFD700';
+      ctx.fillText(txt, px + offX, py + offY);
+    });
+  }
+
   return canvas;
 }
 
@@ -1117,7 +1225,7 @@ async function runMediaPipeAnalysis() {
       }
 
       if (_ios) {
-        console.log('[ASCENT v1.7.1] iOS detected -> skip MediaPipe -> Gemini direct');
+        console.log('[ASCENT v1.8.0] iOS detected -> skip MediaPipe -> Gemini direct');
         progressEl.style.width = '30%';
         statusEl.textContent = 'AI\u9AA8\u683C\u89E3\u6790\u4E2D...\uFF08\u30B5\u30FC\u30D0\u30FC\u51E6\u7406\uFF09';
         var iosFrames = [photoCanvas];
@@ -1196,7 +1304,7 @@ async function runMediaPipeAnalysis() {
     }
 
     if (_ios) {
-      console.log('[ASCENT v1.7.1] iOS detected -> skip MediaPipe -> Gemini direct (video)');
+      console.log('[ASCENT v1.8.0] iOS detected -> skip MediaPipe -> Gemini direct (video)');
       statusEl.textContent = 'AI\u9AA8\u683C\u89E3\u6790\u4E2D...\uFF08\u30B5\u30FC\u30D0\u30FC\u51E6\u7406\uFF09';
       progressEl.style.width = '40%';
       var iosVidResult = await serverPoseDetection(frames, statusEl, progressEl, 'video');
@@ -1488,7 +1596,7 @@ function showPhase(id) {
 // INIT
 // ============================================================
 document.addEventListener('DOMContentLoaded', async () => {
-  console.log('[ASCENT] DOMContentLoaded v1.7.1 — mode=' + new URLSearchParams(window.location.search).get('mode'));
+  console.log('[ASCENT] DOMContentLoaded v1.8.0 — mode=' + new URLSearchParams(window.location.search).get('mode'));
   const params = new URLSearchParams(window.location.search);
   const uidParam = params.get('uid');
   const modeParam = params.get('mode');
