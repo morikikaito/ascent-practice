@@ -507,10 +507,10 @@ AIがシュートフォームの分析を開始しました。
 <div id="bottom-banner" class="bottom-banner">
   <a href="https://buy.stripe.com/28EcN47bXbeA8G4bMHf7i0B" class="btn-gold" target="_blank">UNLEASHプランに入会する →</a>
 </div>
-<div id="app-version" style="position:fixed;bottom:2px;right:6px;font-size:9px;color:rgba(255,255,255,0.15);z-index:9999;pointer-events:none;">v1.6.1</div>
+<div id="app-version" style="position:fixed;bottom:2px;right:6px;font-size:9px;color:rgba(255,255,255,0.15);z-index:9999;pointer-events:none;">v1.6.2</div>
 
 <script>
-console.log('[ASCENT] trial.html v1.6.1 loaded');
+console.log('[ASCENT] trial.html v1.6.2 loaded');
 // ============================================================
 // MEDIAPIPE POSE ANALYSIS
 // ============================================================
@@ -880,7 +880,7 @@ function displayServerResults() {
 
 function applyBlueFilter(canvas) {
   const ctx = canvas.getContext('2d');
-  ctx.fillStyle = 'rgba(30, 60, 120, 0.35)';
+  ctx.fillStyle = 'rgba(15, 30, 80, 0.55)';
   ctx.fillRect(0, 0, canvas.width, canvas.height);
   return canvas;
 }
@@ -894,28 +894,28 @@ const SKELETON_CONNECTIONS = [
 ];
 
 function getJointColor(status) {
-  if (status === 'error') return { fill: '#FF4444', stroke: '#CC0000', shadow: 'rgba(255,68,68,0.8)', glow: 14 };
-  if (status === 'warning') return { fill: '#FFD700', stroke: '#CC9900', shadow: 'rgba(255,215,0,0.8)', glow: 10 };
-  return { fill: '#FFFFFF', stroke: 'rgba(0,0,0,0.5)', shadow: 'rgba(255,255,255,0.4)', glow: 4 };
+  if (status === 'error') return { fill: '#FF4444', stroke: '#CC0000', shadow: 'rgba(255,68,68,0.9)', glow: 18 };
+  if (status === 'warning') return { fill: '#FFD700', stroke: '#CC9900', shadow: 'rgba(255,215,0,0.9)', glow: 14 };
+  return { fill: '#E53935', stroke: '#B71C1C', shadow: 'rgba(229,57,53,0.7)', glow: 8 };
 }
 
 function drawSkeletonOnCanvas(canvas, landmarks) {
-  const ctx = canvas.getContext('2d');
-  const w = canvas.width, h = canvas.height;
-  const lmMap = {};
-  landmarks.forEach(lm => { lmMap[lm.name || lm.landmark] = lm; });
+  var ctx = canvas.getContext('2d');
+  var w = canvas.width, h = canvas.height;
+  var lmMap = {};
+  landmarks.forEach(function(lm) { lmMap[lm.name || lm.landmark] = lm; });
 
-  ctx.lineWidth = Math.max(3, Math.round(w / 120));
+  var lw = Math.max(4, Math.round(w / 80));
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
 
-  SKELETON_CONNECTIONS.forEach(([a, b]) => {
-    const la = lmMap[a], lb = lmMap[b];
+  SKELETON_CONNECTIONS.forEach(function(pair) {
+    var la = lmMap[pair[0]], lb = lmMap[pair[1]];
     if (la && lb && la.x != null && la.y != null && lb.x != null && lb.y != null) {
-      const sA = la.s || 'good', sB = lb.s || 'good';
-      const worst = (sA === 'error' || sB === 'error') ? 'error' : (sA === 'warning' || sB === 'warning') ? 'warning' : 'good';
-      const c = getJointColor(worst);
-      ctx.strokeStyle = c.fill;
-      ctx.shadowColor = c.shadow;
-      ctx.shadowBlur = c.glow;
+      ctx.strokeStyle = 'rgba(255,255,255,0.92)';
+      ctx.lineWidth = lw;
+      ctx.shadowColor = 'rgba(255,255,255,0.5)';
+      ctx.shadowBlur = 6;
       ctx.beginPath();
       ctx.moveTo(la.x * w, la.y * h);
       ctx.lineTo(lb.x * w, lb.y * h);
@@ -924,24 +924,33 @@ function drawSkeletonOnCanvas(canvas, landmarks) {
   });
   ctx.shadowBlur = 0;
 
-  const r = Math.max(5, Math.round(w / 80));
-  landmarks.forEach(lm => {
+  var r = Math.max(6, Math.round(w / 60));
+  landmarks.forEach(function(lm) {
     if (lm.x != null && lm.y != null) {
-      const s = lm.s || 'good';
-      const c = getJointColor(s);
+      var s = lm.s || 'good';
+      var c = getJointColor(s);
       ctx.beginPath();
       ctx.arc(lm.x * w, lm.y * h, r, 0, 2 * Math.PI);
       ctx.fillStyle = c.fill;
+      ctx.shadowColor = c.shadow;
+      ctx.shadowBlur = c.glow;
       ctx.fill();
       ctx.strokeStyle = c.stroke;
       ctx.lineWidth = 2;
       ctx.stroke();
+      ctx.shadowBlur = 0;
 
-      if (s !== 'good') {
+      if (s === 'error') {
         ctx.beginPath();
-        ctx.arc(lm.x * w, lm.y * h, r + 6, 0, 2 * Math.PI);
-        ctx.strokeStyle = s === 'error' ? 'rgba(255,68,68,0.5)' : 'rgba(255,215,0,0.4)';
-        ctx.lineWidth = 2;
+        ctx.arc(lm.x * w, lm.y * h, r * 2.2, 0, 2 * Math.PI);
+        ctx.strokeStyle = 'rgba(255,68,68,0.7)';
+        ctx.lineWidth = 3;
+        ctx.stroke();
+      } else if (s === 'warning') {
+        ctx.beginPath();
+        ctx.arc(lm.x * w, lm.y * h, r * 2, 0, 2 * Math.PI);
+        ctx.strokeStyle = 'rgba(255,215,0,0.6)';
+        ctx.lineWidth = 2.5;
         ctx.stroke();
       }
     }
@@ -1104,7 +1113,7 @@ async function runMediaPipeAnalysis() {
       }
 
       if (_ios) {
-        console.log('[ASCENT v1.6.1] iOS detected -> skip MediaPipe -> Gemini direct');
+        console.log('[ASCENT v1.6.2] iOS detected -> skip MediaPipe -> Gemini direct');
         progressEl.style.width = '30%';
         statusEl.textContent = 'AI\u9AA8\u683C\u89E3\u6790\u4E2D...\uFF08\u30B5\u30FC\u30D0\u30FC\u51E6\u7406\uFF09';
         var iosFrames = [photoCanvas, cloneCanvas(photoCanvas), cloneCanvas(photoCanvas)];
@@ -1182,7 +1191,7 @@ async function runMediaPipeAnalysis() {
     }
 
     if (_ios) {
-      console.log('[ASCENT v1.6.1] iOS detected -> skip MediaPipe -> Gemini direct (video)');
+      console.log('[ASCENT v1.6.2] iOS detected -> skip MediaPipe -> Gemini direct (video)');
       statusEl.textContent = 'AI\u9AA8\u683C\u89E3\u6790\u4E2D...\uFF08\u30B5\u30FC\u30D0\u30FC\u51E6\u7406\uFF09';
       progressEl.style.width = '40%';
       var iosVidResult = await serverPoseDetection(frames, statusEl, progressEl);
@@ -1472,7 +1481,7 @@ function showPhase(id) {
 // INIT
 // ============================================================
 document.addEventListener('DOMContentLoaded', async () => {
-  console.log('[ASCENT] DOMContentLoaded v1.6.1 — mode=' + new URLSearchParams(window.location.search).get('mode'));
+  console.log('[ASCENT] DOMContentLoaded v1.6.2 — mode=' + new URLSearchParams(window.location.search).get('mode'));
   const params = new URLSearchParams(window.location.search);
   const uidParam = params.get('uid');
   const modeParam = params.get('mode');
