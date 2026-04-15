@@ -507,10 +507,10 @@ AIがシュートフォームの分析を開始しました。
 <div id="bottom-banner" class="bottom-banner">
   <a href="https://buy.stripe.com/28EcN47bXbeA8G4bMHf7i0B" class="btn-gold" target="_blank">UNLEASHプランに入会する →</a>
 </div>
-<div id="app-version" style="position:fixed;bottom:2px;right:6px;font-size:9px;color:rgba(255,255,255,0.15);z-index:9999;pointer-events:none;">v1.6.2</div>
+<div id="app-version" style="position:fixed;bottom:2px;right:6px;font-size:9px;color:rgba(255,255,255,0.15);z-index:9999;pointer-events:none;">v1.7.0</div>
 
 <script>
-console.log('[ASCENT] trial.html v1.6.2 loaded');
+console.log('[ASCENT] trial.html v1.7.0 loaded');
 // ============================================================
 // MEDIAPIPE POSE ANALYSIS
 // ============================================================
@@ -847,6 +847,7 @@ function displayMPResults(canvases, metrics) {
   document.getElementById('mp-results-section').style.display = 'block';
 }
 
+var _lastPoseDebugInfo = '';
 function displayServerResults() {
   if (skeletonFrameDataUrls.length === 0) return false;
   var framesEl = document.getElementById('mp-frames');
@@ -868,11 +869,15 @@ function displayServerResults() {
       +'<img src="'+f.src+'" class="skeleton-frame-img" alt="\u9AA8\u683C\u89E3\u6790">';
     framesEl.appendChild(div);
   });
-  document.getElementById('mp-metrics').innerHTML =
-    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:16px;">'
+  var metricsHtml = '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:16px;">'
     +'<div style="background:var(--bg-card);border:1px solid rgba(255,68,68,0.3);border-radius:8px;padding:10px;text-align:center;"><div style="font-family:\'Cormorant Garamond\',serif;font-size:22px;font-weight:700;color:#FF6666;">'+totalErr+'</div><div style="font-size:8px;color:var(--text-muted);margin-top:3px;">\uD83D\uDD34 \u30A8\u30E9\u30FC</div></div>'
     +'<div style="background:var(--bg-card);border:1px solid rgba(255,215,0,0.3);border-radius:8px;padding:10px;text-align:center;"><div style="font-family:\'Cormorant Garamond\',serif;font-size:22px;font-weight:700;color:#FFD700;">'+totalWarn+'</div><div style="font-size:8px;color:var(--text-muted);margin-top:3px;">\uD83D\uDFE1 \u6CE8\u610F</div></div>'
+    +'<div style="background:var(--bg-card);border:1px solid rgba(76,175,80,0.3);border-radius:8px;padding:10px;text-align:center;"><div style="font-family:\'Cormorant Garamond\',serif;font-size:22px;font-weight:700;color:#4CAF50;">'+totalLm+'</div><div style="font-size:8px;color:var(--text-muted);margin-top:3px;">\u2705 \u95A2\u7BC0</div></div>'
     +'</div>';
+  if (_lastPoseDebugInfo) {
+    metricsHtml += '<div style="margin:6px 0;padding:6px 10px;background:rgba(0,0,0,0.5);border:1px solid #555;border-radius:6px;font-size:9px;color:#aaa;word-break:break-all;max-height:80px;overflow-y:auto;">' + _lastPoseDebugInfo + '</div>';
+  }
+  document.getElementById('mp-metrics').innerHTML = metricsHtml;
   document.getElementById('mp-loading-section').style.display = 'none';
   document.getElementById('mp-results-section').style.display = 'block';
   return true;
@@ -973,7 +978,18 @@ async function serverPoseDetection(canvasFrames, statusEl, progressEl) {
 
   validCanvases.forEach(c => applyBlueFilter(c));
 
-  const base64Frames = validCanvases.map(f => f.toDataURL('image/jpeg', 0.6).split(',')[1]);
+  var MAX_DIM = 1024;
+  const sendCanvases = validCanvases.map(function(c) {
+    if (c.width <= MAX_DIM && c.height <= MAX_DIM) return c;
+    var scale = Math.min(MAX_DIM / c.width, MAX_DIM / c.height);
+    var nw = Math.round(c.width * scale), nh = Math.round(c.height * scale);
+    var sc = document.createElement('canvas');
+    sc.width = nw; sc.height = nh;
+    sc.getContext('2d').drawImage(c, 0, 0, nw, nh);
+    return sc;
+  });
+  const base64Frames = sendCanvases.map(f => f.toDataURL('image/jpeg', 0.7).split(',')[1]);
+  console.log('[detect-pose] Sending ' + base64Frames.length + ' frames, sizes: ' + base64Frames.map(f => Math.round(f.length/1024) + 'KB').join(', '));
 
   try {
     statusEl.textContent = 'AI骨格解析中...（画像送信中）[v3]';
@@ -1000,7 +1016,9 @@ async function serverPoseDetection(canvasFrames, statusEl, progressEl) {
     }
     if (data.error) throw new Error(data.error);
 
-    statusEl.textContent = '骨格線を描画中... (frames:' + (data.frames||[]).length + ')';
+    var dbgModel = data._debug?.model || '?';
+    var dbgFrameCount = (data.frames || []).length;
+    statusEl.textContent = '骨格線を描画中... (' + dbgModel + ', frames:' + dbgFrameCount + ')';
     progressEl.style.width = '80%';
 
     skeletonFrameDataUrls = [];
@@ -1037,34 +1055,16 @@ async function serverPoseDetection(canvasFrames, statusEl, progressEl) {
     var totalLm = skeletonFrameDataUrls.reduce(function(s, f){ return s + (f.landmarks||[]).length; }, 0);
     var totalErr = skeletonFrameDataUrls.reduce(function(s, f){ return s + (f.errorCount||0); }, 0);
     var totalWarn = skeletonFrameDataUrls.reduce(function(s, f){ return s + (f.warnCount||0); }, 0);
+    _lastPoseDebugInfo = 'OK model=' + dbgModel + ' frames=' + dbgFrameCount + ' lm=' + totalLm
+      + ' sample=' + (data._debug?.sampleLandmark ? JSON.stringify(data._debug.sampleLandmark) : 'none')
+      + ' counts=' + JSON.stringify(data._debug?.statusCounts || {});
     statusEl.textContent = '骨格解析完了！ ' + drawnCount + 'フレーム / ' + totalLm + '関節検出 / 🔴' + totalErr + ' 🟡' + totalWarn;
-
-    var dbgEl = document.getElementById('pose-debug');
-    if (!dbgEl) {
-      dbgEl = document.createElement('div');
-      dbgEl.id = 'pose-debug';
-      dbgEl.style.cssText = 'margin:8px 0;padding:8px;background:rgba(0,0,0,0.7);border:1px solid #444;border-radius:6px;font-size:10px;color:#aaa;word-break:break-all;max-height:120px;overflow-y:auto;';
-      statusEl.parentElement.appendChild(dbgEl);
-    }
-    dbgEl.innerHTML = '<b style="color:#fff;">Debug:</b> frames=' + (data.frames||[]).length
-      + ' | f0_landmarks=' + ((data.frames&&data.frames[0])?data.frames[0].landmarks.length:'N/A')
-      + ' | sample=' + (data._debug?.sampleLandmark ? JSON.stringify(data._debug.sampleLandmark) : 'none')
-      + ' | status_counts=' + JSON.stringify(data._debug?.statusCounts||{})
-      + '<br><b style="color:#fff;">Raw preview:</b> ' + (data._debug?.rawTextPreview||'').substring(0,150);
 
     return true;
   } catch (e) {
     console.error('Server pose detection failed:', e);
+    _lastPoseDebugInfo = '<span style="color:#f44;">FAIL:</span> ' + e.message.substring(0, 150);
     statusEl.textContent = '骨格検出エラー: ' + e.message.substring(0, 80);
-
-    var dbgEl2 = document.getElementById('pose-debug');
-    if (!dbgEl2) {
-      dbgEl2 = document.createElement('div');
-      dbgEl2.id = 'pose-debug';
-      dbgEl2.style.cssText = 'margin:8px 0;padding:8px;background:rgba(255,0,0,0.2);border:1px solid #f44;border-radius:6px;font-size:10px;color:#faa;word-break:break-all;max-height:120px;overflow-y:auto;';
-      statusEl.parentElement.appendChild(dbgEl2);
-    }
-    dbgEl2.innerHTML = '<b style="color:#f44;">ERROR:</b> ' + e.message + '<br><b>Stack:</b> ' + (e.stack||'').substring(0,200);
 
     skeletonFrameDataUrls = [];
     canvasFrames.forEach((canvas, i) => {
@@ -1080,7 +1080,7 @@ async function serverPoseDetection(canvasFrames, statusEl, progressEl) {
       });
     });
     frameImages = canvasFrames.map(f => f ? f.toDataURL('image/jpeg', 0.7).split(',')[1] : null);
-    return true;
+    return false;
   }
 }
 
@@ -1113,7 +1113,7 @@ async function runMediaPipeAnalysis() {
       }
 
       if (_ios) {
-        console.log('[ASCENT v1.6.2] iOS detected -> skip MediaPipe -> Gemini direct');
+        console.log('[ASCENT v1.7.0] iOS detected -> skip MediaPipe -> Gemini direct');
         progressEl.style.width = '30%';
         statusEl.textContent = 'AI\u9AA8\u683C\u89E3\u6790\u4E2D...\uFF08\u30B5\u30FC\u30D0\u30FC\u51E6\u7406\uFF09';
         var iosFrames = [photoCanvas, cloneCanvas(photoCanvas), cloneCanvas(photoCanvas)];
@@ -1191,7 +1191,7 @@ async function runMediaPipeAnalysis() {
     }
 
     if (_ios) {
-      console.log('[ASCENT v1.6.2] iOS detected -> skip MediaPipe -> Gemini direct (video)');
+      console.log('[ASCENT v1.7.0] iOS detected -> skip MediaPipe -> Gemini direct (video)');
       statusEl.textContent = 'AI\u9AA8\u683C\u89E3\u6790\u4E2D...\uFF08\u30B5\u30FC\u30D0\u30FC\u51E6\u7406\uFF09';
       progressEl.style.width = '40%';
       var iosVidResult = await serverPoseDetection(frames, statusEl, progressEl);
@@ -1481,7 +1481,7 @@ function showPhase(id) {
 // INIT
 // ============================================================
 document.addEventListener('DOMContentLoaded', async () => {
-  console.log('[ASCENT] DOMContentLoaded v1.6.2 — mode=' + new URLSearchParams(window.location.search).get('mode'));
+  console.log('[ASCENT] DOMContentLoaded v1.7.0 — mode=' + new URLSearchParams(window.location.search).get('mode'));
   const params = new URLSearchParams(window.location.search);
   const uidParam = params.get('uid');
   const modeParam = params.get('mode');
