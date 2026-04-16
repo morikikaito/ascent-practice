@@ -1072,6 +1072,7 @@ function drawSkeletonOnCanvas(canvas, landmarks) {
 }
 
 async function serverPoseDetection(canvasFrames, statusEl, progressEl, mode) {
+  _practiceTrack('diagnosis_start', { mode: mode, engine: POSE_ENGINE, frameCount: (canvasFrames||[]).length });
   statusEl.textContent = 'AI骨格解析中...（サーバー処理）';
   progressEl.style.width = '40%';
 
@@ -1181,12 +1182,14 @@ async function serverPoseDetection(canvasFrames, statusEl, progressEl, mode) {
       + ' | counts=' + JSON.stringify(data._debug?.statusCounts || {});
     statusEl.textContent = '骨格解析完了！ ' + drawnCount + 'フレーム / ' + totalLm + '関節検出 / 🔴' + totalErr + ' 🟡' + totalWarn;
 
+    _practiceTrack('diagnosis_result', { success: true, engine: POSE_ENGINE, landmarkCount: skeletonFrameDataUrls.reduce(function(s,f){return s+(f.landmarks||[]).length;},0) });
     return true;
   } catch (e) {
     console.error('Server pose detection failed:', e);
     var errMsg = e.name === 'AbortError' ? 'タイムアウト（' + (fetchTimeout/1000) + '秒超過）' : e.message;
     _lastPoseDebugInfo = '<span style="color:#f44;">FAIL[' + POSE_ENGINE + ']:</span> ' + errMsg.substring(0, 200);
     statusEl.textContent = '骨格検出エラー: ' + errMsg.substring(0, 80);
+    _practiceTrack('diagnosis_result', { success: false, engine: POSE_ENGINE, error: errMsg.substring(0, 80) });
 
     skeletonFrameDataUrls = [];
     canvasFrames.forEach((canvas, i) => {
@@ -1435,6 +1438,27 @@ function proceedToSpec() {
 // CONFIG
 // ============================================================
 const WORKER_BASE = 'https://ascent-agent.moriki-beaters.workers.dev';
+
+// ASCENT Practice Analytics
+var _practiceAnalyticsQueue = [];
+var _practiceFlushTimer = null;
+function _practiceTrack(event, extra) {
+  var ev = Object.assign({ event: event, page: 'trial', engine: typeof POSE_ENGINE !== 'undefined' ? POSE_ENGINE : 'gemini', uid: (localStorage.getItem('ascent_analytics_id') || 'anon'), t: Date.now() }, extra || {});
+  _practiceAnalyticsQueue.push(ev);
+  if (_practiceFlushTimer) clearTimeout(_practiceFlushTimer);
+  _practiceFlushTimer = setTimeout(function() {
+    if (_practiceAnalyticsQueue.length === 0) return;
+    var payload = JSON.stringify(_practiceAnalyticsQueue.splice(0));
+    if (navigator.sendBeacon) { navigator.sendBeacon('https://ascent-analytics.moriki-beaters.workers.dev/track', new Blob([payload], {type:'application/json'})); }
+    else { fetch('https://ascent-analytics.moriki-beaters.workers.dev/track', {method:'POST',body:payload,headers:{'Content-Type':'application/json'},keepalive:true}).catch(function(){}); }
+  }, 3000);
+}
+window.addEventListener('beforeunload', function() {
+  if (_practiceAnalyticsQueue.length > 0) {
+    navigator.sendBeacon && navigator.sendBeacon('https://ascent-analytics.moriki-beaters.workers.dev/track', new Blob([JSON.stringify(_practiceAnalyticsQueue)], {type:'application/json'}));
+  }
+});
+_practiceTrack('trial_visit');
 const DIAGNOSE_ENDPOINT = WORKER_BASE + '/diagnose';
 const SAVE_ENDPOINT = WORKER_BASE + '/save-diagnosis';
 var POSE_ENGINE = new URLSearchParams(window.location.search).get('engine') || 'gemini';

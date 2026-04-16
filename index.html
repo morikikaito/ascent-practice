@@ -1319,6 +1319,71 @@ function init(){
 document.addEventListener('DOMContentLoaded',init);
 
 if('serviceWorker' in navigator){navigator.serviceWorker.getRegistrations().then(function(r){r.forEach(function(w){w.unregister()});});}
+
+// ============================================================
+// ASCENT ANALYTICS TRACKING
+// ============================================================
+(function(){
+  var ANALYTICS_URL = 'https://ascent-analytics.moriki-beaters.workers.dev/track';
+  var PAGE_ID = 'practice';
+  var eventQueue = [];
+  var flushTimer = null;
+
+  function getUserId(){
+    var id = localStorage.getItem('ascent_analytics_id');
+    if(!id){ id = 'u_' + Date.now() + '_' + Math.random().toString(36).slice(2,7); localStorage.setItem('ascent_analytics_id', id); }
+    return id;
+  }
+
+  function trackEvent(event, extra){
+    var ev = Object.assign({ event: event, page: PAGE_ID, uid: getUserId(), plan: localStorage.getItem('currentPlan') || 'free', t: Date.now() }, extra || {});
+    eventQueue.push(ev);
+    if(flushTimer) clearTimeout(flushTimer);
+    flushTimer = setTimeout(flushEvents, 3000);
+  }
+
+  function flushEvents(){
+    if(eventQueue.length === 0) return;
+    var payload = JSON.stringify(eventQueue.splice(0));
+    if(navigator.sendBeacon){ navigator.sendBeacon(ANALYTICS_URL, new Blob([payload], {type:'application/json'})); }
+    else { fetch(ANALYTICS_URL, {method:'POST', body:payload, headers:{'Content-Type':'application/json'}, keepalive:true}).catch(function(){}); }
+  }
+
+  window.addEventListener('beforeunload', flushEvents);
+
+  // ページ訪問
+  trackEvent('practice_visit');
+
+  // ドリル開始/完了をフック
+  var origStartDrill = window.startDrill;
+  window.startDrill = function(){
+    trackEvent('feature_start', { feature:'drill', difficulty: (state.selectedMode ? 'mode'+state.selectedMode : 'unknown'), plan: localStorage.getItem('currentPlan')||'free' });
+    return origStartDrill.apply(this, arguments);
+  };
+
+  var origFinishDrill = window.finishDrill;
+  window.finishDrill = function(){
+    var result = origFinishDrill.apply(this, arguments);
+    trackEvent('feature_complete', { feature:'drill', reps: state.drill ? state.drill.count : 0 });
+    return result;
+  };
+
+  // リアクション開始/完了をフック
+  var origStartReactionMode = window.startReactionMode;
+  window.startReactionMode = function(){
+    trackEvent('feature_start', { feature:'reaction', difficulty: (state.reaction ? state.reaction.difficulty : 'normal'), plan: localStorage.getItem('currentPlan')||'free' });
+    return origStartReactionMode.apply(this, arguments);
+  };
+
+  var origFinishReaction = window.finishReaction;
+  window.finishReaction = function(){
+    var result = origFinishReaction.apply(this, arguments);
+    if(state.reaction){
+      trackEvent('feature_complete', { feature:'reaction', correct: state.reaction.correct, total: state.reaction.total, rate: Math.round((state.reaction.correct/state.reaction.total)*100) });
+    }
+    return result;
+  };
+})();
 </script>
 </body>
 </html>
