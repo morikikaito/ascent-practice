@@ -1637,11 +1637,38 @@ document.addEventListener('DOMContentLoaded', async () => {
   const params = new URLSearchParams(window.location.search);
   const uidParam = params.get('uid');
   const modeParam = params.get('mode');
+  const codeParam = (params.get('code') || '').trim().toUpperCase();
   if (uidParam) {
     lineUid = uidParam;
     localStorage.setItem('ascent_trial_uid', uidParam);
   } else {
     lineUid = localStorage.getItem('ascent_trial_uid') || 'anonymous';
+  }
+
+  // VIP招待コード処理
+  if (codeParam && /^VIP-[A-Z0-9]{8}$/.test(codeParam)) {
+    var savedTier = localStorage.getItem('ascent_vip_code') === codeParam;
+    if (savedTier) {
+      userTier = 'vip';
+    } else {
+      try {
+        const inviteRes = await fetch(WORKER_BASE + '/verify-invite', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ code: codeParam, lineUid: lineUid })
+        });
+        const inviteData = await inviteRes.json();
+        if (inviteData.ok) {
+          userTier = 'vip';
+          localStorage.setItem('ascent_vip_code', codeParam);
+          console.log('[ASCENT] VIP code accepted:', codeParam, inviteData.memo || '');
+        } else {
+          console.warn('[ASCENT] VIP code rejected:', inviteData.error);
+        }
+      } catch (e) {
+        console.error('[ASCENT] VIP verify failed:', e);
+      }
+    }
   }
 
   var forceReset = params.get('reset') === '1' || modeParam === 'free';
@@ -1686,6 +1713,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 });
 
 async function checkUserTier() {
+  if (userTier === 'vip') return; // VIP招待コードで既に確定
   if (lineUid === 'anonymous') return;
   try {
     var ctrl = new AbortController();
