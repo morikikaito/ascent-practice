@@ -817,6 +817,7 @@ function isPlanAtLeast(minPlan) {
   const order = { lite: 0, unleash: 1, pro: 2 };
   return (order[getCurrentPlan()] || 0) >= (order[minPlan] || 0);
 }
+function isVip() { return !!localStorage.getItem('ascent_vip_code'); }
 
 /* ━━━ LOCALSTORAGE ━━━ */
 function getHistory() { try { return JSON.parse(localStorage.getItem('ascent_history_v3') || '[]'); } catch { return []; } }
@@ -1052,7 +1053,7 @@ function checkBadgeEarned(badge) {
 function renderBadges() {
   const plan = getCurrentPlan(); const grid = document.getElementById('badges-grid');
   grid.innerHTML = BADGE_DEFS.map(b => {
-    const needsHigherPlan = b.plan !== 'all' && !isPlanAtLeast(b.plan);
+    const needsHigherPlan = !isVip() && b.plan !== 'all' && !isPlanAtLeast(b.plan);
     const earned = !needsHigherPlan && checkBadgeEarned(b);
     if (needsHigherPlan) {
       return '<div class="badge-item locked-plan" onclick="showUpgradeModal()" title="' + b.desc + '">' +
@@ -1136,9 +1137,9 @@ function renderReactionSelect() {
   const container = document.getElementById('reaction-difficulty-cards');
   const sessions = getSessionCount(); const plan = getCurrentPlan();
   container.innerHTML = Object.values(REACTION_DIFFICULTIES).map(d => {
-    const sessionLocked = sessions < d.unlockAt;
-    /* ② HARD/ELITEはUNLEASH/PRO限定 */
-    const planLocked = (d.key === 'hard' || d.key === 'elite') && !isPlanAtLeast('unleash');
+    const sessionLocked = !isVip() && sessions < d.unlockAt;
+    /* ② HARD/ELITEはUNLEASH/PRO限定（VIPは無視） */
+    const planLocked = !isVip() && (d.key === 'hard' || d.key === 'elite') && !isPlanAtLeast('unleash');
     const isLocked = sessionLocked || planLocked;
     let lockInfo = '';
     if (planLocked) {
@@ -1160,7 +1161,7 @@ function renderReactionSelect() {
 
 function checkUnlocks() {
   const sessions = getSessionCount(); const unlocked = JSON.parse(localStorage.getItem('ascent_unlocked') || '{}');
-  if (!isPlanAtLeast('unleash')) return;
+  if (!isPlanAtLeast('unleash') && !isVip()) return;
   const toCheck = [{ key:'hard', at:30, text:'HARD MODE UNLOCKED' },{ key:'elite', at:100, text:'ELITE MODE UNLOCKED' }];
   for (const u of toCheck) { if (sessions >= u.at && !unlocked[u.key]) { unlocked[u.key] = true; localStorage.setItem('ascent_unlocked', JSON.stringify(unlocked)); showUnlockOverlay(u.text); return; } }
 }
