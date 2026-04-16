@@ -9,16 +9,32 @@
 <meta name="apple-mobile-web-app-title" content="ASCENT Practice">
 <title>ASCENT Practice | 判断力トレーニング</title>
 <script>
-if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.getRegistrations().then(function(regs) {
-    regs.forEach(function(r) { r.unregister(); });
+// SW強制除去 + ロード監視（旧SWによる無限リロード対策）
+(function() {
+  try {
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.getRegistrations().then(function(regs) {
+        regs.forEach(function(r) { r.unregister(); });
+      });
+      if ('caches' in window) {
+        caches.keys().then(function(ks) {
+          ks.forEach(function(k) { caches.delete(k); });
+        });
+      }
+    }
+  } catch(e) { console.warn('SW cleanup failed:', e); }
+
+  // 5秒以上loadingが残ってたら強制的に隠す（ハングアップ対策）
+  window.addEventListener('load', function() {
+    setTimeout(function() {
+      var loading = document.getElementById('loading');
+      if (loading && !loading.classList.contains('hidden')) {
+        console.warn('[ASCENT] Loading hung for 5s — forcing hide');
+        loading.classList.add('hidden');
+      }
+    }, 5000);
   });
-  if ('caches' in window) {
-    caches.keys().then(function(ks) {
-      ks.forEach(function(k) { caches.delete(k); });
-    });
-  }
-}
+})();
 </script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -1312,11 +1328,15 @@ async function checkVipCode(){
   }
   try {
     const uid = params.get('uid') || localStorage.getItem('ascent_auth_id') || code;
+    const ctrl = new AbortController();
+    const tid = setTimeout(function(){ ctrl.abort(); }, 4000);
     const res = await fetch(WORKER_BASE + '/verify-invite', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ code: code, lineUid: uid })
+      body: JSON.stringify({ code: code, lineUid: uid }),
+      signal: ctrl.signal
     });
+    clearTimeout(tid);
     const data = await res.json();
     if (data.ok) {
       localStorage.setItem('ascent_vip_code', code);
