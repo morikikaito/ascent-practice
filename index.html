@@ -875,7 +875,7 @@ function goToDiagnosis() {
   }
 }
 function goToTraining() {
-  if (isAuthValid() && localStorage.getItem('currentPlan') && localStorage.getItem('currentPlan') !== 'free') {
+  if ((isAuthValid() || isVip()) && localStorage.getItem('currentPlan') && localStorage.getItem('currentPlan') !== 'free') {
     showScreen('screen-dashboard');
   } else {
     showScreen('screen-auth');
@@ -1343,7 +1343,8 @@ async function init(){
   const vipOK = await checkVipCode();
   setTimeout(()=>{
     document.getElementById('loading').classList.add('hidden');
-    if(isAuthValid()&&localStorage.getItem('currentPlan')){showScreen('screen-dashboard');}else{showScreen('screen-home');}
+    const authOK = isAuthValid() || isVip();
+    if(authOK && localStorage.getItem('currentPlan')){showScreen('screen-dashboard');}else{showScreen('screen-home');}
   },1200);
 }
 document.addEventListener('DOMContentLoaded',init);
