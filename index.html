@@ -1301,8 +1301,36 @@ function updateHistoryScreen(){
 
 function showToast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2500);}
 
+/* ━━━ VIP招待コード処理 ━━━ */
+async function checkVipCode(){
+  const params = new URLSearchParams(window.location.search);
+  const code = (params.get('code') || '').trim().toUpperCase();
+  if (!code || !/^VIP-[A-Z0-9]{8}$/.test(code)) return false;
+  if (localStorage.getItem('ascent_vip_code') === code && localStorage.getItem('currentPlan') === 'unleash') {
+    return true; // 既に認証済み
+  }
+  try {
+    const uid = params.get('uid') || localStorage.getItem('ascent_auth_id') || code;
+    const res = await fetch(WORKER_BASE + '/verify-invite', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ code: code, lineUid: uid })
+    });
+    const data = await res.json();
+    if (data.ok) {
+      localStorage.setItem('ascent_vip_code', code);
+      localStorage.setItem('currentPlan', 'unleash');
+      localStorage.setItem('ascent_auth', Date.now().toString());
+      localStorage.setItem('ascent_auth_id', uid);
+      console.log('[ASCENT] VIP code accepted:', code, data.memo || '');
+      return true;
+    }
+  } catch(e) { console.error('VIP verify failed:', e); }
+  return false;
+}
+
 /* ━━━ INIT ━━━ */
-function init(){
+async function init(){
   document.getElementById('login-btn').addEventListener('click',login);
   document.getElementById('password-input').addEventListener('keydown',e=>{if(e.key==='Enter')login();});
   document.getElementById('auth-btn').addEventListener('click',attemptAuth);
@@ -1311,6 +1339,7 @@ function init(){
   getSessionCount();
   document.querySelectorAll('.volume-slider').forEach(s=>s.value=state.volume*100);
   document.querySelectorAll('.volume-val').forEach(v=>v.textContent=Math.round(state.volume*100)+'%');
+  const vipOK = await checkVipCode();
   setTimeout(()=>{
     document.getElementById('loading').classList.add('hidden');
     if(isAuthValid()&&localStorage.getItem('currentPlan')){showScreen('screen-dashboard');}else{showScreen('screen-home');}
