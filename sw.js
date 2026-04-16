@@ -1,3 +1,4 @@
+// Service Worker は廃止。既存登録を即時解除するのみ。
 self.addEventListener('install', function() { self.skipWaiting(); });
 self.addEventListener('activate', function(e) {
   e.waitUntil(
@@ -5,10 +6,7 @@ self.addEventListener('activate', function(e) {
       return Promise.all(ks.map(function(k) { return caches.delete(k); }));
     }).then(function() {
       return self.registration.unregister();
-    }).then(function() {
-      return self.clients.matchAll();
-    }).then(function(clients) {
-      clients.forEach(function(c) { c.navigate(c.url); });
     })
   );
 });
+self.addEventListener('fetch', function() {});
