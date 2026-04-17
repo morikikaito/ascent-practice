@@ -753,6 +753,8 @@ html, body {
    ASCENT PRACTICE v3 Phase2 — CORE LOGIC
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
 
+const WORKER_BASE = 'https://ascent-agent.because-and-and-and.workers.dev';
+
 /* ① プラン別パスワード */
 const PLAN_PW_VERIFY_URL = WORKER_BASE + '/verify-password';
 
@@ -884,7 +886,6 @@ function goToAuth() { showScreen('screen-auth'); }
 function goToCounter() { counterReset(); showScreen('screen-counter'); }
 
 /* ━━━ AUTH (LINE ID / Email → Airtable) ━━━ */
-const WORKER_BASE = 'https://ascent-agent.because-and-and-and.workers.dev';
 const AT_FIELDS = { unleash: 'fldMdXQ1KVrOjPkrA', pro: 'fldsm6toargqzNba6', lite: 'fldx9r5emLQAN2y0u' };
 
 async function attemptAuth() {
