@@ -9,32 +9,16 @@
 <meta name="apple-mobile-web-app-title" content="ASCENT Practice">
 <title>ASCENT Practice | 判断力トレーニング</title>
 <script>
-// SW強制除去 + ロード監視（旧SWによる無限リロード対策）
-(function() {
-  try {
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.getRegistrations().then(function(regs) {
-        regs.forEach(function(r) { r.unregister(); });
-      });
-      if ('caches' in window) {
-        caches.keys().then(function(ks) {
-          ks.forEach(function(k) { caches.delete(k); });
-        });
-      }
-    }
-  } catch(e) { console.warn('SW cleanup failed:', e); }
-
-  // 5秒以上loadingが残ってたら強制的に隠す（ハングアップ対策）
-  window.addEventListener('load', function() {
-    setTimeout(function() {
-      var loading = document.getElementById('loading');
-      if (loading && !loading.classList.contains('hidden')) {
-        console.warn('[ASCENT] Loading hung for 5s — forcing hide');
-        loading.classList.add('hidden');
-      }
-    }, 5000);
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.getRegistrations().then(function(regs) {
+    regs.forEach(function(r) { r.unregister(); });
   });
-})();
+  if ('caches' in window) {
+    caches.keys().then(function(ks) {
+      ks.forEach(function(k) { caches.delete(k); });
+    });
+  }
+}
 </script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -833,7 +817,6 @@ function isPlanAtLeast(minPlan) {
   const order = { lite: 0, unleash: 1, pro: 2 };
   return (order[getCurrentPlan()] || 0) >= (order[minPlan] || 0);
 }
-function isVip() { return !!localStorage.getItem('ascent_vip_code'); }
 
 /* ━━━ LOCALSTORAGE ━━━ */
 function getHistory() { try { return JSON.parse(localStorage.getItem('ascent_history_v3') || '[]'); } catch { return []; } }
@@ -891,7 +874,7 @@ function goToDiagnosis() {
   }
 }
 function goToTraining() {
-  if ((isAuthValid() || isVip()) && localStorage.getItem('currentPlan') && localStorage.getItem('currentPlan') !== 'free') {
+  if (isAuthValid() && localStorage.getItem('currentPlan') && localStorage.getItem('currentPlan') !== 'free') {
     showScreen('screen-dashboard');
   } else {
     showScreen('screen-auth');
@@ -1069,7 +1052,7 @@ function checkBadgeEarned(badge) {
 function renderBadges() {
   const plan = getCurrentPlan(); const grid = document.getElementById('badges-grid');
   grid.innerHTML = BADGE_DEFS.map(b => {
-    const needsHigherPlan = !isVip() && b.plan !== 'all' && !isPlanAtLeast(b.plan);
+    const needsHigherPlan = b.plan !== 'all' && !isPlanAtLeast(b.plan);
     const earned = !needsHigherPlan && checkBadgeEarned(b);
     if (needsHigherPlan) {
       return '<div class="badge-item locked-plan" onclick="showUpgradeModal()" title="' + b.desc + '">' +
@@ -1153,9 +1136,9 @@ function renderReactionSelect() {
   const container = document.getElementById('reaction-difficulty-cards');
   const sessions = getSessionCount(); const plan = getCurrentPlan();
   container.innerHTML = Object.values(REACTION_DIFFICULTIES).map(d => {
-    const sessionLocked = !isVip() && sessions < d.unlockAt;
-    /* ② HARD/ELITEはUNLEASH/PRO限定（VIPは無視） */
-    const planLocked = !isVip() && (d.key === 'hard' || d.key === 'elite') && !isPlanAtLeast('unleash');
+    const sessionLocked = sessions < d.unlockAt;
+    /* ② HARD/ELITEはUNLEASH/PRO限定 */
+    const planLocked = (d.key === 'hard' || d.key === 'elite') && !isPlanAtLeast('unleash');
     const isLocked = sessionLocked || planLocked;
     let lockInfo = '';
     if (planLocked) {
@@ -1177,7 +1160,7 @@ function renderReactionSelect() {
 
 function checkUnlocks() {
   const sessions = getSessionCount(); const unlocked = JSON.parse(localStorage.getItem('ascent_unlocked') || '{}');
-  if (!isPlanAtLeast('unleash') && !isVip()) return;
+  if (!isPlanAtLeast('unleash')) return;
   const toCheck = [{ key:'hard', at:30, text:'HARD MODE UNLOCKED' },{ key:'elite', at:100, text:'ELITE MODE UNLOCKED' }];
   for (const u of toCheck) { if (sessions >= u.at && !unlocked[u.key]) { unlocked[u.key] = true; localStorage.setItem('ascent_unlocked', JSON.stringify(unlocked)); showUnlockOverlay(u.text); return; } }
 }
@@ -1318,40 +1301,8 @@ function updateHistoryScreen(){
 
 function showToast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2500);}
 
-/* ━━━ VIP招待コード処理 ━━━ */
-async function checkVipCode(){
-  const params = new URLSearchParams(window.location.search);
-  const code = (params.get('code') || '').trim().toUpperCase();
-  if (!code || !/^VIP-[A-Z0-9]{8}$/.test(code)) return false;
-  if (localStorage.getItem('ascent_vip_code') === code && localStorage.getItem('currentPlan') === 'unleash') {
-    return true; // 既に認証済み
-  }
-  try {
-    const uid = params.get('uid') || localStorage.getItem('ascent_auth_id') || code;
-    const ctrl = new AbortController();
-    const tid = setTimeout(function(){ ctrl.abort(); }, 4000);
-    const res = await fetch(WORKER_BASE + '/verify-invite', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ code: code, lineUid: uid }),
-      signal: ctrl.signal
-    });
-    clearTimeout(tid);
-    const data = await res.json();
-    if (data.ok) {
-      localStorage.setItem('ascent_vip_code', code);
-      localStorage.setItem('currentPlan', 'unleash');
-      localStorage.setItem('ascent_auth', Date.now().toString());
-      localStorage.setItem('ascent_auth_id', uid);
-      console.log('[ASCENT] VIP code accepted:', code, data.memo || '');
-      return true;
-    }
-  } catch(e) { console.error('VIP verify failed:', e); }
-  return false;
-}
-
 /* ━━━ INIT ━━━ */
-async function init(){
+function init(){
   document.getElementById('login-btn').addEventListener('click',login);
   document.getElementById('password-input').addEventListener('keydown',e=>{if(e.key==='Enter')login();});
   document.getElementById('auth-btn').addEventListener('click',attemptAuth);
@@ -1360,11 +1311,9 @@ async function init(){
   getSessionCount();
   document.querySelectorAll('.volume-slider').forEach(s=>s.value=state.volume*100);
   document.querySelectorAll('.volume-val').forEach(v=>v.textContent=Math.round(state.volume*100)+'%');
-  const vipOK = await checkVipCode();
   setTimeout(()=>{
     document.getElementById('loading').classList.add('hidden');
-    const authOK = isAuthValid() || isVip();
-    if(authOK && localStorage.getItem('currentPlan')){showScreen('screen-dashboard');}else{showScreen('screen-home');}
+    if(isAuthValid()&&localStorage.getItem('currentPlan')){showScreen('screen-dashboard');}else{showScreen('screen-home');}
   },1200);
 }
 document.addEventListener('DOMContentLoaded',init);

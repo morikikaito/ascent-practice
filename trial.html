@@ -1637,47 +1637,11 @@ document.addEventListener('DOMContentLoaded', async () => {
   const params = new URLSearchParams(window.location.search);
   const uidParam = params.get('uid');
   const modeParam = params.get('mode');
-  const codeParam = (params.get('code') || '').trim().toUpperCase();
   if (uidParam) {
     lineUid = uidParam;
     localStorage.setItem('ascent_trial_uid', uidParam);
   } else {
     lineUid = localStorage.getItem('ascent_trial_uid') || 'anonymous';
-  }
-
-  // VIP招待コード処理（診断＋自主練メニュー両方を解放）
-  if (codeParam && /^VIP-[A-Z0-9]{8}$/.test(codeParam)) {
-    function applyVip() {
-      userTier = 'vip';
-      localStorage.setItem('ascent_vip_code', codeParam);
-      // 自主練メニュー（index.html）側も同時にアンロック
-      localStorage.setItem('currentPlan', 'unleash');
-      localStorage.setItem('ascent_auth', Date.now().toString());
-      if (!localStorage.getItem('ascent_auth_id')) {
-        localStorage.setItem('ascent_auth_id', lineUid !== 'anonymous' ? lineUid : codeParam);
-      }
-    }
-    var savedTier = localStorage.getItem('ascent_vip_code') === codeParam;
-    if (savedTier) {
-      applyVip();
-    } else {
-      try {
-        const inviteRes = await fetch(WORKER_BASE + '/verify-invite', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ code: codeParam, lineUid: lineUid })
-        });
-        const inviteData = await inviteRes.json();
-        if (inviteData.ok) {
-          applyVip();
-          console.log('[ASCENT] VIP code accepted:', codeParam, inviteData.memo || '');
-        } else {
-          console.warn('[ASCENT] VIP code rejected:', inviteData.error);
-        }
-      } catch (e) {
-        console.error('[ASCENT] VIP verify failed:', e);
-      }
-    }
   }
 
   var forceReset = params.get('reset') === '1' || modeParam === 'free';
@@ -1722,7 +1686,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 });
 
 async function checkUserTier() {
-  if (userTier === 'vip') return; // VIP招待コードで既に確定
   if (lineUid === 'anonymous') return;
   try {
     var ctrl = new AbortController();
