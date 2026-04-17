@@ -1108,7 +1108,7 @@ async function serverPoseDetection(canvasFrames, statusEl, progressEl, mode) {
     statusEl.textContent = 'AI骨格解析中...';
     progressEl.style.width = '50%';
 
-    var fetchTimeout = POSE_ENGINE === 'claude' ? 35000 : 25000;
+    var fetchTimeout = POSE_ENGINE === 'claude' ? 55000 : 55000;
     var abortCtrl = new AbortController();
     var fetchTimer = setTimeout(function() { abortCtrl.abort(); }, fetchTimeout);
 
