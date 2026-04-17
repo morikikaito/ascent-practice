@@ -367,7 +367,8 @@ input[type="file"] {
 
 診断結果をもとに、次のステップへ進みたい方は
 UNLEASHプランをご検討ください👇</div>
-    <a href="https://buy.stripe.com/28EcN47bXbeA8G4bMHf7i0B" class="btn-gold" target="_blank">UNLEASHプランに入会する</a>
+    <!-- Phase 1.5前: <a href="https://buy.stripe.com/28EcN47bXbeA8G4bMHf7i0B" class="btn-gold" target="_blank">UNLEASHプランに入会する</a> -->
+    <a href="https://buy.stripe.com/eVqcN4eEp2I4aOc9Ezf7i0G?prefilled_promo_code=LAUNCH_PRE40" class="btn-gold" target="_blank">今すぐ予約する（初月¥3,980）</a>
   </div>
   <p style="text-align:center;color:var(--text-muted);font-size:0.8rem;margin-top:16px;">Step By Step ASCENT 代表 森木 開斗</p>
 </div>
@@ -499,13 +500,15 @@ AIがシュートフォームの分析を開始しました。
   <div class="locked-card">
     <div class="lock-icon">🔒</div>
     <p>残りの原因と改善メニューは、UNLEASHプランで完全公開しています。</p>
-    <a href="https://buy.stripe.com/28EcN47bXbeA8G4bMHf7i0B" class="btn-gold" style="margin-top:16px;" target="_blank">UNLEASHプランに入会する</a>
+    <!-- Phase 1.5前: <a href="https://buy.stripe.com/28EcN47bXbeA8G4bMHf7i0B" class="btn-gold" style="margin-top:16px;" target="_blank">UNLEASHプランに入会する</a> -->
+    <a href="https://buy.stripe.com/eVqcN4eEp2I4aOc9Ezf7i0G?prefilled_promo_code=LAUNCH_PRE40" class="btn-gold" style="margin-top:16px;" target="_blank">今すぐ予約する（初月¥3,980）</a>
   </div>
 </div>
 
 <!-- Bottom Banner -->
 <div id="bottom-banner" class="bottom-banner">
-  <a href="https://buy.stripe.com/28EcN47bXbeA8G4bMHf7i0B" class="btn-gold" target="_blank">UNLEASHプランに入会する →</a>
+  <!-- Phase 1.5前: <a href="https://buy.stripe.com/28EcN47bXbeA8G4bMHf7i0B" class="btn-gold" target="_blank">今すぐ予約する（初月¥3,980）→</a> -->
+  <a href="https://buy.stripe.com/eVqcN4eEp2I4aOc9Ezf7i0G?prefilled_promo_code=LAUNCH_PRE40" class="btn-gold" target="_blank">今すぐ予約する（初月¥3,980）→</a>
 </div>
 <div id="app-version" style="position:fixed;bottom:2px;right:6px;font-size:9px;color:rgba(255,255,255,0.15);z-index:9999;pointer-events:none;">v1.8.2</div>
 
@@ -1464,7 +1467,8 @@ const SAVE_ENDPOINT = WORKER_BASE + '/save-diagnosis';
 var POSE_ENGINE = new URLSearchParams(window.location.search).get('engine') || 'gemini';
 var DETECT_POSE_URL = WORKER_BASE + (POSE_ENGINE === 'claude' ? '/detect-pose-claude' : '/detect-pose');
 console.log('[ASCENT] Pose engine: ' + POSE_ENGINE + ' -> ' + DETECT_POSE_URL);
-const UNLEASH_URL = 'https://buy.stripe.com/28EcN47bXbeA8G4bMHf7i0B';
+// Phase 1.5前: const UNLEASH_URL = 'https://buy.stripe.com/28EcN47bXbeA8G4bMHf7i0B';
+const UNLEASH_URL = 'https://buy.stripe.com/eVqcN4eEp2I4aOc9Ezf7i0G?prefilled_promo_code=LAUNCH_PRE40';
 const AIRTABLE_TABLE_CUSTOMERS = 'tblI9tweL01ALYll9';
 const AIRTABLE_TABLE_DIAGNOSIS = 'tblw7UmDwboYb4P1O';
 let diagnosisStartTime = null;
@@ -2203,7 +2207,7 @@ function showResult(text) {
   } else if (userTier === 'lite') {
     // LITE: show full result + UNLEASH upgrade nudge
     resultEl.innerHTML = formatResultText(text)
-      + '<div style="margin-top:24px;padding:16px;background:var(--bg-elevated);border:1px solid var(--border);border-radius:8px;text-align:center;color:var(--text-muted);font-size:0.9rem;line-height:1.8;">改善メニューはUNLEASHプランで提供しています。<br><a href="' + UNLEASH_URL + '" target="_blank" style="color:var(--gold);text-decoration:underline;">UNLEASHプランに切り替える →</a></div>';
+      + '<div style="margin-top:24px;padding:16px;background:var(--bg-elevated);border:1px solid var(--border);border-radius:8px;text-align:center;color:var(--text-muted);font-size:0.9rem;line-height:1.8;">改善メニューはUNLEASHプランで提供しています。<br><a href="' + UNLEASH_URL + '" target="_blank" style="color:var(--gold);text-decoration:underline;">今すぐ予約する（初月¥3,980）→</a></div>';
     document.getElementById('bottom-banner').classList.add('show');
   } else {
     // FREE: show only 1st cause, lock the rest
@@ -2241,7 +2245,7 @@ function formatFreeResult(text) {
     const lockedHtml = '<div style="margin-top:20px;padding:20px;background:rgba(201,168,76,0.06);border:1px solid var(--border);border-radius:8px;text-align:center;">'
       + '<p style="font-size:1.2rem;margin-bottom:8px;">🔒</p>'
       + '<p style="color:var(--text-muted);font-size:0.9rem;line-height:1.8;">残りの原因と改善メニューは<br>UNLEASHプランで完全公開しています。</p>'
-      + '<a href="' + UNLEASH_URL + '" target="_blank" class="btn-gold" style="margin-top:12px;display:inline-block;">UNLEASHプランに入会する →</a>'
+      + '<a href="' + UNLEASH_URL + '" target="_blank" class="btn-gold" style="margin-top:12px;display:inline-block;">今すぐ予約する（初月¥3,980）→</a>'
       + '</div>';
     return '<div style="white-space:pre-wrap;line-height:1.9;">' + escapeHtml(visiblePart) + '</div>' + lockedHtml;
   }
@@ -2251,7 +2255,7 @@ function formatFreeResult(text) {
     + '<div style="margin-top:20px;padding:20px;background:rgba(201,168,76,0.06);border:1px solid var(--border);border-radius:8px;text-align:center;">'
     + '<p style="font-size:1.2rem;margin-bottom:8px;">🔒</p>'
     + '<p style="color:var(--text-muted);font-size:0.9rem;line-height:1.8;">残りの原因と改善メニューは<br>UNLEASHプランで完全公開しています。</p>'
-    + '<a href="' + UNLEASH_URL + '" target="_blank" class="btn-gold" style="margin-top:12px;display:inline-block;">UNLEASHプランに入会する →</a>'
+    + '<a href="' + UNLEASH_URL + '" target="_blank" class="btn-gold" style="margin-top:12px;display:inline-block;">今すぐ予約する（初月¥3,980）→</a>'
     + '</div>';
 }
 
