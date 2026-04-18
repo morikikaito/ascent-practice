@@ -869,8 +869,8 @@ function showScreen(id) {
 function goToDiagnosis() {
   const plan = localStorage.getItem('currentPlan');
   const authId = localStorage.getItem('ascent_auth_id');
-  if (plan && plan !== 'free' && authId) {
-    location.href = 'trial.html?mode=paid&uid=' + encodeURIComponent(authId);
+  if (plan && plan !== 'free') {
+    location.href = 'trial.html?mode=paid' + (authId ? '&uid=' + encodeURIComponent(authId) : '');
   } else {
     location.href = 'trial.html?mode=free';
   }
