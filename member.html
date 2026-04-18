@@ -1324,7 +1324,14 @@ function init(){
   document.querySelectorAll('.volume-val').forEach(v=>v.textContent=Math.round(state.volume*100)+'%');
   setTimeout(()=>{
     document.getElementById('loading').classList.add('hidden');
-    showScreen('screen-home'); // 無料版入口: 全ユーザーにscreen-homeを表示
+    // member.html 専用: 認証必須
+    var plan = localStorage.getItem('currentPlan');
+    var validPlans = ['lite', 'unleash', 'pro'];
+    if (plan && validPlans.indexOf(plan) !== -1) {
+      showScreen('screen-home');
+    } else {
+      showScreen('screen-auth'); // ログイン画面
+    }
   },1200);
 }
 document.addEventListener('DOMContentLoaded',init);

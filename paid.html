@@ -23,6 +23,16 @@ if ('serviceWorker' in navigator) {
   }
 }
 </script>
+<script>
+// 有料版アクセスガード: 認証なしはmember.htmlへリダイレクト
+(function() {
+  var plan = localStorage.getItem('currentPlan');
+  var validPlans = ['lite', 'unleash', 'pro'];
+  if (!plan || validPlans.indexOf(plan) === -1) {
+    window.location.href = 'member.html';
+  }
+})();
+</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Noto+Serif+JP:wght@300;400;500;700&family=Cormorant+Garamond:wght@400;600;700&display=swap" rel="stylesheet">
@@ -344,14 +354,6 @@ input[type="file"] {
   margin: 40px 0 32px;
   white-space: pre-line;
 }
-.cta-subtext {
-  text-align: center;
-  color: var(--gold);
-  font-size: 13px;
-  margin-top: 8px;
-  letter-spacing: 0.05em;
-  font-weight: 500;
-}
 </style>
 </head>
 <body>
@@ -377,7 +379,6 @@ input[type="file"] {
 UNLEASHプランをご検討ください👇</div>
     <!-- Phase 1.5前: <a href="https://buy.stripe.com/28EcN47bXbeA8G4bMHf7i0B" class="btn-gold" target="_blank">UNLEASHプランに入会する</a> -->
     <a href="https://buy.stripe.com/eVqcN4eEp2I4aOc9Ezf7i0G?prefilled_promo_code=LAUNCH_PRE40" class="btn-gold" target="_blank">今すぐ予約する（初月¥3,980）</a>
-    <p class="cta-subtext">40名限定｜明日22:20まで</p>
   </div>
   <p style="text-align:center;color:var(--text-muted);font-size:0.8rem;margin-top:16px;">Step By Step ASCENT 代表 森木 開斗</p>
 </div>
@@ -511,7 +512,6 @@ AIがシュートフォームの分析を開始しました。
     <p>残りの原因と改善メニューは、UNLEASHプランで完全公開しています。</p>
     <!-- Phase 1.5前: <a href="https://buy.stripe.com/28EcN47bXbeA8G4bMHf7i0B" class="btn-gold" style="margin-top:16px;" target="_blank">UNLEASHプランに入会する</a> -->
     <a href="https://buy.stripe.com/eVqcN4eEp2I4aOc9Ezf7i0G?prefilled_promo_code=LAUNCH_PRE40" class="btn-gold" style="margin-top:16px;" target="_blank">今すぐ予約する（初月¥3,980）</a>
-    <p class="cta-subtext">40名限定｜明日22:20まで</p>
   </div>
 </div>
 
@@ -519,7 +519,6 @@ AIがシュートフォームの分析を開始しました。
 <div id="bottom-banner" class="bottom-banner">
   <!-- Phase 1.5前: <a href="https://buy.stripe.com/28EcN47bXbeA8G4bMHf7i0B" class="btn-gold" target="_blank">今すぐ予約する（初月¥3,980）→</a> -->
   <a href="https://buy.stripe.com/eVqcN4eEp2I4aOc9Ezf7i0G?prefilled_promo_code=LAUNCH_PRE40" class="btn-gold" target="_blank">今すぐ予約する（初月¥3,980）→</a>
-  <p class="cta-subtext">40名限定｜明日22:20まで</p>
 </div>
 <div id="app-version" style="position:fixed;bottom:2px;right:6px;font-size:9px;color:rgba(255,255,255,0.15);z-index:9999;pointer-events:none;">v1.8.2</div>
 
@@ -1648,7 +1647,7 @@ function showPhase(id) {
 // INIT
 // ============================================================
 document.addEventListener('DOMContentLoaded', async () => {
-  console.log('[ASCENT] DOMContentLoaded v1.8.2 — trial (free only)');
+  console.log('[ASCENT] DOMContentLoaded v1.8.2 — paid (member only)');
   const params = new URLSearchParams(window.location.search);
   const uidParam = params.get('uid');
   const modeParam = params.get('mode');
@@ -1670,8 +1669,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     return;
   }
 
-  // 無料版固定: paid分岐に到達させずに早期return
-  userTier = 'free';
+  // 有料版固定: checkUserTierで認証状態を判定してからphase-uploadに直行
+  // ascent_trial_used チェックをスキップ（有料版は無制限診断）
+  await checkUserTier();
   showPhase('phase-upload');
   initUpload();
   initSpecForm();
@@ -2232,6 +2232,7 @@ async function submitAnswer() {
 // PHASE 5: RESULT
 // ============================================================
 function showResult(text) {
+  if (userTier === 'free') userTier = 'vip'; // 有料版フェイルセーフ: freeに落ちてもvip扱い
   showPhase('phase-result');
   buildFrameGallery('result-frames-images', 'result-frames', 'result-frames-toggle', 'result-toggle-icon');
 
@@ -2256,7 +2257,7 @@ function showResult(text) {
 
   // Clear progress state and set trial used flag
   clearState();
-  localStorage.setItem('ascent_trial_used', 'true');
+  // localStorage.setItem('ascent_trial_used', 'true'); // 有料版では無効化（無制限診断）
 
   // Save to Airtable (fire-and-forget)
   saveToAirtable(text);
