@@ -1314,7 +1314,7 @@ function init(){
   document.querySelectorAll('.volume-val').forEach(v=>v.textContent=Math.round(state.volume*100)+'%');
   setTimeout(()=>{
     document.getElementById('loading').classList.add('hidden');
-    if(isAuthValid()&&localStorage.getItem('currentPlan')){showScreen('screen-dashboard');}else{showScreen('screen-home');}
+    if(isAuthValid()&&localStorage.getItem('currentPlan')){showScreen('screen-dashboard');}else{showScreen('screen-login');}
   },1200);
 }
 document.addEventListener('DOMContentLoaded',init);

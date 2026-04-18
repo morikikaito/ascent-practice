@@ -1690,32 +1690,53 @@ document.addEventListener('DOMContentLoaded', async () => {
 });
 
 async function checkUserTier() {
-  if (lineUid === 'anonymous') return;
-  try {
-    var ctrl = new AbortController();
-    var tid = setTimeout(function () { ctrl.abort(); }, 5000);
-    const res = await fetch(WORKER_BASE + '/verify-member', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ lineUid }),
-      signal: ctrl.signal
-    });
-    clearTimeout(tid);
-    if (!res.ok) return;
-    const data = await res.json();
-    if (data.found) {
-      const fields = data.fields;
-      const hasUnleash = fields['fldMdXQ1KVrOjPkrA'] === true;
-      const hasPro = fields['fldsm6toargqzNba6'] === true;
-      const hasLite = fields['fldx9r5emLQAN2y0u'] === true;
-      if (hasUnleash || hasPro) {
+  // 1. UIDベースのAirtable判定（既存動線を維持）
+  if (lineUid !== 'anonymous') {
+    try {
+      var ctrl = new AbortController();
+      var tid = setTimeout(function () { ctrl.abort(); }, 5000);
+      const res = await fetch(WORKER_BASE + '/verify-member', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ lineUid }),
+        signal: ctrl.signal
+      });
+      clearTimeout(tid);
+      if (res.ok) {
+        const data = await res.json();
+        if (data.found) {
+          const fields = data.fields;
+          const hasUnleash = fields['fldMdXQ1KVrOjPkrA'] === true;
+          const hasPro = fields['fldsm6toargqzNba6'] === true;
+          const hasLite = fields['fldx9r5emLQAN2y0u'] === true;
+          if (hasUnleash || hasPro) {
+            userTier = 'vip';
+            return;
+          } else if (hasLite) {
+            userTier = 'lite';
+            return;
+          }
+        }
+      }
+    } catch (e) {
+      console.error('Tier check (UID) failed:', e);
+    }
+  }
+
+  // 2. Practice本体のパスワード認証状態を参照（同一ドメインのlocalStorage共有）
+  var authTs = localStorage.getItem('ascent_auth');
+  var plan = localStorage.getItem('currentPlan');
+  if (authTs && plan) {
+    var elapsed = Date.now() - parseInt(authTs, 10);
+    if (elapsed < 30 * 24 * 60 * 60 * 1000) {
+      if (plan === 'unleash' || plan === 'pro') {
         userTier = 'vip';
-      } else if (hasLite) {
+        return;
+      } else if (plan === 'lite') {
         userTier = 'lite';
+        return;
       }
     }
-  } catch (e) {
-    console.error('Tier check failed:', e);
   }
 }
 
