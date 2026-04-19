@@ -2209,46 +2209,109 @@ async function submitAnswer() {
 // ============================================================
 // PHASE 5: RESULT
 // ============================================================
+function toHalfWidthDigits(s) {
+  return (s || '').replace(/[０-９]/g, function (c) {
+    return String.fromCharCode(c.charCodeAt(0) - 0xFEE0);
+  });
+}
+
 function countCausesTotal(text) {
-  // formatFreeResult 由来の正規表現を流用: 原因2〜原因10 をカウント
-  // 原因1 は先頭固定で別カウント、合計 = matches + 1
-  // Gemini 応答が原因を含まない場合のフォールバックとして最小 1 を保証
-  const lines = (text || '').split('\n');
-  let count = 0;
-  for (let i = 0; i < lines.length; i++) {
-    if (lines[i].match(/原因[②③④⑤⑥⑦⑧⑨⑩2-9]|【原因[2-9]|【[2-9]つ目/)) {
-      count++;
+  // 優先度1: Gemini プロンプトで「原因の総数（〇〇個あります！）」を冒頭に出力させている
+  //          その数値を直接抽出するのが最も信頼できる
+  // 優先度2: 「原因①〜⑩ / 原因1〜9」出現数で数える
+  // フォールバック: 最小 1 を保証（Gemini 応答が全く解析できない場合）
+  const src = toHalfWidthDigits(text || '');
+
+  const directPatterns = [
+    /原因の総数[^0-9]{0,10}(\d+)/,
+    /(\d+)\s*個\s*あります/,
+    /(\d+)\s*個の\s*(?:原因|改善(?:ポイント|点))/,
+    /(?:原因|改善(?:ポイント|点))\s*は?\s*(\d+)\s*個/
+  ];
+  for (let i = 0; i < directPatterns.length; i++) {
+    const m = src.match(directPatterns[i]);
+    if (m) {
+      const n = parseInt(m[1], 10);
+      if (n >= 1 && n <= 30) return n;
     }
   }
-  const total = count + 1;
-  return total < 1 ? 1 : total;
+
+  // 原因ヘッダー数を正規表現で数える（原因1〜10 / 原因①〜⑩ / 【原因N】 / 【Nつ目】）
+  const lines = src.split('\n');
+  let count = 0;
+  const headerRe = /(?:^|[^0-9])原因\s*[①②③④⑤⑥⑦⑧⑨⑩1-9]|【\s*原因\s*[1-9]|【\s*[1-9]\s*つ目/;
+  for (let i = 0; i < lines.length; i++) {
+    if (headerRe.test(lines[i])) count++;
+  }
+  if (count >= 1) return count;
+
+  return 1;
+}
+
+function stripImprovementSections(text) {
+  // 各原因ブロック内の「改善メニュー」以降のセクションを次の原因ヘッダーまで除外
+  if (!text) return '';
+  const lines = text.split('\n');
+  const causeHeaderRe = /^\s*[【\[]?\s*原因\s*[①②③④⑤⑥⑦⑧⑨⑩0-9０-９]/;
+  const menuHeaderRe = /^\s*[【\[]?\s*(?:改善メニュー|練習メニュー|改善ドリル|改善プラン|改善の(?:ポイント|コツ)|改善方法|メニュー)\s*[】\]:：]?/;
+  const disclaimerRe = /^\s*※本分析は技術の向上/; // 免責は末尾に出すので保持したい
+
+  const out = [];
+  let skipping = false;
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    if (causeHeaderRe.test(line)) {
+      skipping = false;
+      out.push(line);
+      continue;
+    }
+    if (disclaimerRe.test(line)) {
+      skipping = false;
+      out.push(line);
+      continue;
+    }
+    if (menuHeaderRe.test(line)) {
+      skipping = true;
+      continue;
+    }
+    if (!skipping) out.push(line);
+  }
+
+  return out.join('\n').replace(/\n{3,}/g, '\n\n').trim();
 }
 
 function showResult(text) {
-  // 有料版 paid.html は userTier 問わず要約表示（原因総数 + 後日LINE送付文言のみ）
-  if (userTier === 'free') userTier = 'vip'; // 有料版フェイルセーフ: freeに落ちてもvip扱い
+  // 有料版 paid.html: 原因詳細を全文表示 + 改善メニューだけ除外 + 末尾に後日LINE文言
+  if (userTier === 'free') userTier = 'vip'; // 有料版フェイルセーフ
   showPhase('phase-result');
   buildFrameGallery('result-frames-images', 'result-frames', 'result-frames-toggle', 'result-toggle-icon');
 
   const resultEl = document.getElementById('result-content');
   const totalCauses = countCausesTotal(text);
+  const causeBody = stripImprovementSections(text);
 
-  resultEl.innerHTML =
+  const headerHtml =
     '<div style="padding:22px 20px;background:var(--bg-elevated);border:1px solid var(--border);border-radius:10px;text-align:center;">'
       + '<div style="font-family:\'Cinzel\',serif;color:var(--gold);font-size:0.78rem;letter-spacing:0.24em;font-weight:600;margin-bottom:12px;">DIAGNOSIS RESULT</div>'
       + '<div style="font-size:1rem;color:var(--text);line-height:1.9;">あなたのシュートフォームから<br>'
         + '<span style="font-family:\'Cormorant Garamond\',serif;color:var(--gold);font-size:2.4rem;font-weight:600;letter-spacing:0.06em;display:inline-block;margin:6px 2px;">' + totalCauses + '個</span>'
         + 'の改善ポイントが見つかりました</div>'
-    + '</div>'
-    + '<div style="margin-top:20px;padding:16px 18px;background:rgba(201,168,76,0.06);border-left:2px solid var(--gold);border-radius:4px;color:var(--text);font-size:0.9rem;line-height:1.9;">'
+    + '</div>';
+
+  const bodyHtml =
+    '<div style="margin-top:24px;padding:18px 18px;background:rgba(255,255,255,0.02);border:1px solid var(--border);border-radius:8px;white-space:pre-wrap;line-height:1.9;color:var(--text);font-size:0.95rem;">'
+      + escapeHtml(causeBody)
+    + '</div>';
+
+  const footerHtml =
+    '<div style="margin-top:20px;padding:16px 18px;background:rgba(201,168,76,0.06);border-left:2px solid var(--gold);border-radius:4px;color:var(--text);font-size:0.9rem;line-height:1.9;">'
       + '改善メニューは後日 LINE でお送りします☺️'
     + '</div>';
 
-  // Clear progress state and set trial used flag
+  resultEl.innerHTML = headerHtml + bodyHtml + footerHtml;
+
   clearState();
   // localStorage.setItem('ascent_trial_used', 'true'); // 有料版では無効化（無制限診断）
-
-  // Save to Airtable (fire-and-forget)
   saveToAirtable(text);
 }
 
