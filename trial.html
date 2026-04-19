@@ -376,8 +376,8 @@ input[type="file"] {
 診断結果をもとに、次のステップへ進みたい方は
 UNLEASHプランをご検討ください👇</div>
     <!-- Phase 1.5前: <a href="https://buy.stripe.com/28EcN47bXbeA8G4bMHf7i0B" class="btn-gold" target="_blank">UNLEASHプランに入会する</a> -->
-    <a href="https://buy.stripe.com/eVqcN4eEp2I4aOc9Ezf7i0G?prefilled_promo_code=LAUNCH_PRE40" class="btn-gold" target="_blank">今すぐ予約する（初月¥3,980）</a>
-    <p class="cta-subtext">40名限定｜明日22:20まで</p>
+    <a href="https://buy.stripe.com/eVqcN4eEp2I4aOc9Ezf7i0G?prefilled_promo_code=LAUNCH_PRE40" class="btn-gold" target="_blank">40名限定枠を確保する（初月¥3,980）</a>
+    <p class="cta-subtext">40名限定｜2026/04/19 22:20まで</p>
   </div>
   <p style="text-align:center;color:var(--text-muted);font-size:0.8rem;margin-top:16px;">Step By Step ASCENT 代表 森木 開斗</p>
 </div>
@@ -519,16 +519,16 @@ AIがシュートフォームの分析を開始しました。
     <p id="cta-dynamic-msg" style="color:var(--text);line-height:1.8;margin:0 0 8px;font-size:0.95rem;">他にも複数の原因が、<br>あなたのシュートに影響している可能性があります。</p>
     <p style="color:var(--text-muted);line-height:1.8;font-size:0.85rem;">UNLEASHプランで全ての原因と改善メニューを確認できます。</p>
     <!-- Phase 1.5前: <a href="https://buy.stripe.com/28EcN47bXbeA8G4bMHf7i0B" class="btn-gold" style="margin-top:16px;" target="_blank">UNLEASHプランに入会する</a> -->
-    <a href="https://buy.stripe.com/eVqcN4eEp2I4aOc9Ezf7i0G?prefilled_promo_code=LAUNCH_PRE40" class="btn-gold" style="margin-top:16px;" target="_blank">今すぐ予約する（初月¥3,980）→</a>
-    <p class="cta-subtext">40名限定｜明日22:20まで</p>
+    <a href="https://buy.stripe.com/eVqcN4eEp2I4aOc9Ezf7i0G?prefilled_promo_code=LAUNCH_PRE40" class="btn-gold" style="margin-top:16px;" target="_blank">40名限定枠を確保する（初月¥3,980）→</a>
+    <p class="cta-subtext">40名限定｜2026/04/19 22:20まで</p>
   </div>
 </div>
 
 <!-- Bottom Banner -->
 <div id="bottom-banner" class="bottom-banner">
-  <!-- Phase 1.5前: <a href="https://buy.stripe.com/28EcN47bXbeA8G4bMHf7i0B" class="btn-gold" target="_blank">今すぐ予約する（初月¥3,980）→</a> -->
-  <a href="https://buy.stripe.com/eVqcN4eEp2I4aOc9Ezf7i0G?prefilled_promo_code=LAUNCH_PRE40" class="btn-gold" target="_blank">今すぐ予約する（初月¥3,980）→</a>
-  <p class="cta-subtext">40名限定｜明日22:20まで</p>
+  <!-- Phase 1.5前: <a href="https://buy.stripe.com/28EcN47bXbeA8G4bMHf7i0B" class="btn-gold" target="_blank">40名限定枠を確保する（初月¥3,980）→</a> -->
+  <a href="https://buy.stripe.com/eVqcN4eEp2I4aOc9Ezf7i0G?prefilled_promo_code=LAUNCH_PRE40" class="btn-gold" target="_blank">40名限定枠を確保する（初月¥3,980）→</a>
+  <p class="cta-subtext">40名限定｜2026/04/19 22:20まで</p>
 </div>
 <div id="app-version" style="position:fixed;bottom:2px;right:6px;font-size:9px;color:rgba(255,255,255,0.15);z-index:9999;pointer-events:none;">v1.8.2</div>
 
@@ -2255,7 +2255,7 @@ function showResult(text) {
   } else if (userTier === 'lite') {
     // LITE: show full result + UNLEASH upgrade nudge
     resultEl.innerHTML = formatResultText(text)
-      + '<div style="margin-top:24px;padding:16px;background:var(--bg-elevated);border:1px solid var(--border);border-radius:8px;text-align:center;color:var(--text-muted);font-size:0.9rem;line-height:1.8;">改善メニューはUNLEASHプランで提供しています。<br><a href="' + UNLEASH_URL + '" target="_blank" style="color:var(--gold);text-decoration:underline;">今すぐ予約する（初月¥3,980）→</a></div>';
+      + '<div style="margin-top:24px;padding:16px;background:var(--bg-elevated);border:1px solid var(--border);border-radius:8px;text-align:center;color:var(--text-muted);font-size:0.9rem;line-height:1.8;">改善メニューはUNLEASHプランで提供しています。<br><a href="' + UNLEASH_URL + '" target="_blank" style="color:var(--gold);text-decoration:underline;">40名限定枠を確保する（初月¥3,980）→</a></div>';
     document.getElementById('bottom-banner').classList.add('show');
   } else {
     // FREE: show only 1st cause, lock the rest
@@ -2374,7 +2374,7 @@ function formatFreeResult(text) {
     + '<p style="font-size:1.2rem;margin-bottom:8px;">🔒</p>'
     + '<p style="color:var(--text);font-size:0.95rem;line-height:1.8;margin-bottom:6px;">' + dynamicMsg + '</p>'
     + '<p style="color:var(--text-muted);font-size:0.85rem;line-height:1.8;">UNLEASHプランで全ての原因と改善メニューを確認できます。</p>'
-    + '<a href="' + UNLEASH_URL + '" target="_blank" class="btn-gold" style="margin-top:12px;display:inline-block;">今すぐ予約する（初月¥3,980）→</a>'
+    + '<a href="' + UNLEASH_URL + '" target="_blank" class="btn-gold" style="margin-top:12px;display:inline-block;">40名限定枠を確保する（初月¥3,980）→</a>'
     + '</div>';
 
   if (firstCauseEnd > 0) {

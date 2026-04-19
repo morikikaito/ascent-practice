@@ -227,6 +227,85 @@ input[type="text"]:focus, input[type="password"]:focus {
 .plan-badge.plan-LITE { background: var(--lite); }
 .plan-badge.plan-UNLEASH, .plan-badge.plan-UNLEASH_LEGACY { background: var(--unleash); }
 .plan-badge.plan-PRO { background: var(--pro); }
+
+/* ── Founder 40 Benefits ── */
+.founder-benefits {
+  margin-top: 18px;
+  background: rgba(201,168,76,0.045);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 22px 20px;
+}
+.founder-label {
+  font-family: 'Cinzel', serif;
+  color: var(--gold);
+  font-size: 0.78rem;
+  letter-spacing: 0.24em;
+  font-weight: 600;
+  text-align: center;
+}
+.founder-sub {
+  font-family: 'Cormorant Garamond', serif;
+  color: var(--gold-light);
+  font-size: 1.25rem;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-align: center;
+  margin-top: 4px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid rgba(201,168,76,0.18);
+}
+.benefit-title {
+  font-family: 'Noto Serif JP', serif;
+  color: var(--text);
+  font-size: 0.95rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  margin: 18px 0 10px;
+  text-align: center;
+}
+.benefit-list {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 16px;
+}
+.benefit-list li {
+  position: relative;
+  padding: 10px 0 10px 20px;
+  color: var(--text);
+  font-size: 0.88rem;
+  line-height: 1.75;
+  border-bottom: 1px solid rgba(201,168,76,0.08);
+}
+.benefit-list li:last-child { border-bottom: none; }
+.benefit-list li::before {
+  content: '';
+  position: absolute;
+  left: 2px;
+  top: 18px;
+  width: 6px;
+  height: 6px;
+  background: var(--gold);
+  border-radius: 50%;
+}
+.founder-message {
+  margin-top: 14px;
+  padding: 14px 16px;
+  background: rgba(201,168,76,0.08);
+  border-left: 2px solid var(--gold);
+  border-radius: 4px;
+  color: var(--text);
+  font-size: 0.88rem;
+  line-height: 1.9;
+}
+.founder-signature {
+  display: block;
+  font-family: 'Cinzel', serif;
+  color: var(--gold);
+  font-size: 0.76rem;
+  letter-spacing: 0.16em;
+  margin-bottom: 4px;
+}
 .section {
   margin-top: 24px;
   background: var(--bg-elevated);
@@ -300,6 +379,24 @@ input[type="text"]:focus, input[type="password"]:focus {
       <div class="member-id-value" id="dash-member-id">--</div>
     </div>
 
+    <div class="founder-benefits">
+      <div class="founder-label">LIMITED 40 MEMBER</div>
+      <div class="founder-sub" id="founder-sub">No.--- / ASC-2026-XXXX</div>
+
+      <h4 class="benefit-title">この番号が持つ権利</h4>
+      <ul class="benefit-list">
+        <li>Phase 2.0「AI骨格シュートフォーム診断」— 一般公開前の先行アクセス権</li>
+        <li>初月 ¥3,980（通常 ¥4,980）— 40名限定のスタート価格</li>
+        <li>40名限定フィードバック — 森木開斗への直接相談権（月1回）</li>
+        <li>No.001〜040は世界に40人だけ — この枠は今夜の決済者のみに割り当て</li>
+      </ul>
+
+      <p class="founder-message">
+        <span class="founder-signature">開斗より</span>
+        「最初に信じてくれた40人。全員を、俺は名前で覚えてる。」
+      </p>
+    </div>
+
     <div>
       <div class="meta-row">
         <div class="meta-label">PLAN</div>
@@ -368,7 +465,22 @@ input[type="text"]:focus, input[type="password"]:focus {
 
     var name = session.displayName || 'メンバー';
     el('greeting').textContent = 'こんにちは、' + name + 'さん☺️';
-    el('dash-member-id').textContent = session.memberId || '--';
+
+    var memberIdStr = session.memberId || '';
+    el('dash-member-id').textContent = memberIdStr || '--';
+
+    // Founder 40: "ASC-2026-0042" → "No.042 / ASC-2026-0042"
+    var founderSub = el('founder-sub');
+    if (founderSub) {
+      var match = memberIdStr.match(/^ASC-2026-(\d{4})$/);
+      if (match) {
+        var num = parseInt(match[1], 10);
+        var noStr = 'No.' + String(num).padStart(3, '0');
+        founderSub.textContent = noStr + ' / ' + memberIdStr;
+      } else {
+        founderSub.textContent = '--- / ' + (memberIdStr || 'ASC-2026-XXXX');
+      }
+    }
 
     var planKey = session.plan || 'UNLEASH';
     var badge = el('dash-plan-badge');
@@ -479,6 +591,18 @@ input[type="text"]:focus, input[type="password"]:focus {
     }
 
     saveSession(data);
+
+    // Practice (paid.html / member.html) との互換性のため currentPlan を同時保存
+    // Worker レスポンスは大文字 ("UNLEASH" / "UNLEASH_LEGACY" / "LITE" / "PRO")
+    // Practice 側は小文字前提なので変換、UNLEASH_LEGACY は UNLEASH 扱いにマップ
+    var planLower = (data.plan || '').toLowerCase();
+    if (planLower === 'unleash_legacy') planLower = 'unleash';
+    if (['lite', 'unleash', 'pro'].indexOf(planLower) !== -1) {
+      localStorage.setItem('currentPlan', planLower);
+      localStorage.setItem('ascent_auth', Date.now().toString());
+      localStorage.setItem('ascent_auth_id', data.memberId);
+    }
+
     showDashboard(data);
   }
 
