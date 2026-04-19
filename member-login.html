@@ -1,0 +1,509 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,user-scalable=no">
+<meta name="theme-color" content="#050507">
+<title>ASCENT | 会員ログイン</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Cormorant+Garamond:wght@500;600&family=Noto+Serif+JP:wght@300;400;500;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #050507;
+  --bg-card: #0d0d10;
+  --bg-elevated: rgba(255,255,255,0.03);
+  --gold: #C9A84C;
+  --gold-light: #e0c070;
+  --gold-dark: #9a7a2e;
+  --text: #F5F0E8;
+  --text-dim: rgba(245,240,232,0.6);
+  --text-muted: rgba(245,240,232,0.4);
+  --border: rgba(201,168,76,0.25);
+  --danger: #e06666;
+  --lite: #7aa3d6;
+  --unleash: #C9A84C;
+  --pro: #b07ce0;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Noto Serif JP', serif;
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+}
+body {
+  padding: 24px 16px 80px;
+  line-height: 1.8;
+}
+.container {
+  width: 100%;
+  max-width: 480px;
+  margin: 0 auto;
+}
+.brand {
+  text-align: center;
+  margin: 16px 0 32px;
+}
+.brand h1 {
+  font-family: 'Cinzel', serif;
+  font-size: 1.4rem;
+  letter-spacing: 0.24em;
+  color: var(--gold);
+  font-weight: 600;
+}
+.brand .tagline {
+  color: var(--text-muted);
+  font-size: 0.72rem;
+  letter-spacing: 0.2em;
+  margin-top: 6px;
+}
+.card {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 32px 24px;
+}
+.card-label {
+  font-family: 'Cinzel', serif;
+  color: var(--text-dim);
+  font-size: 0.72rem;
+  letter-spacing: 0.22em;
+  margin-bottom: 10px;
+  text-align: center;
+}
+h2 {
+  font-family: 'Cinzel', serif;
+  color: var(--gold);
+  font-size: 1.05rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-align: center;
+  margin-bottom: 20px;
+}
+label {
+  display: block;
+  color: var(--text-dim);
+  font-size: 0.78rem;
+  letter-spacing: 0.12em;
+  margin: 16px 0 6px;
+  font-family: 'Cinzel', serif;
+}
+input[type="text"], input[type="password"] {
+  width: 100%;
+  padding: 14px 16px;
+  background: #000;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text);
+  font-family: 'Noto Serif JP', serif;
+  font-size: 1rem;
+  letter-spacing: 0.05em;
+  -webkit-appearance: none;
+}
+input[type="text"]:focus, input[type="password"]:focus {
+  outline: none;
+  border-color: var(--gold);
+  box-shadow: 0 0 0 2px rgba(201,168,76,0.15);
+}
+.input-hint {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  margin-top: 6px;
+  line-height: 1.6;
+}
+.btn-gold {
+  display: block;
+  width: 100%;
+  padding: 15px 20px;
+  margin-top: 24px;
+  background: var(--gold);
+  color: var(--bg);
+  font-family: 'Noto Serif JP', serif;
+  font-weight: 700;
+  text-decoration: none;
+  border: none;
+  border-radius: 6px;
+  letter-spacing: 0.08em;
+  cursor: pointer;
+  font-size: 0.98rem;
+  text-align: center;
+  transition: background 0.18s ease;
+}
+.btn-gold:hover:not(:disabled) { background: var(--gold-light); }
+.btn-gold:disabled { opacity: 0.5; cursor: not-allowed; }
+.btn-outline {
+  display: inline-block;
+  padding: 13px 22px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text);
+  font-family: 'Noto Serif JP', serif;
+  text-decoration: none;
+  font-size: 0.9rem;
+  background: transparent;
+  cursor: pointer;
+  margin-top: 12px;
+  letter-spacing: 0.04em;
+}
+.btn-outline:hover { border-color: var(--gold); color: var(--gold); }
+.error-box {
+  display: none;
+  border: 1px solid rgba(224,102,102,0.4);
+  background: rgba(224,102,102,0.05);
+  padding: 12px 14px;
+  border-radius: 6px;
+  margin-top: 14px;
+  color: #ffb0b0;
+  font-size: 0.88rem;
+  line-height: 1.7;
+}
+.hidden { display: none !important; }
+
+/* ── Dashboard ── */
+.dashboard h2 {
+  text-align: left;
+  margin-bottom: 16px;
+  letter-spacing: 0.12em;
+}
+.greeting {
+  font-size: 1rem;
+  color: var(--text);
+  margin-bottom: 20px;
+}
+.member-id-block {
+  background: rgba(201,168,76,0.06);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 20px;
+  text-align: center;
+  margin-bottom: 18px;
+}
+.member-id-label {
+  font-family: 'Cinzel', serif;
+  color: var(--text-dim);
+  font-size: 0.7rem;
+  letter-spacing: 0.24em;
+  margin-bottom: 6px;
+}
+.member-id-value {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 2.2rem;
+  font-weight: 600;
+  color: var(--gold);
+  letter-spacing: 0.08em;
+  word-break: break-all;
+}
+.meta-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 0;
+  border-bottom: 1px solid rgba(201,168,76,0.08);
+  font-size: 0.9rem;
+}
+.meta-row:last-child { border-bottom: none; }
+.meta-label {
+  color: var(--text-dim);
+  font-family: 'Cinzel', serif;
+  font-size: 0.72rem;
+  letter-spacing: 0.16em;
+}
+.meta-value {
+  color: var(--text);
+  font-family: 'Noto Serif JP', serif;
+}
+.plan-badge {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 4px;
+  font-family: 'Cinzel', serif;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  color: var(--bg);
+}
+.plan-badge.plan-LITE { background: var(--lite); }
+.plan-badge.plan-UNLEASH, .plan-badge.plan-UNLEASH_LEGACY { background: var(--unleash); }
+.plan-badge.plan-PRO { background: var(--pro); }
+.section {
+  margin-top: 24px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 20px;
+}
+.section h3 {
+  font-family: 'Cinzel', serif;
+  color: var(--gold);
+  font-size: 0.88rem;
+  letter-spacing: 0.18em;
+  font-weight: 600;
+  margin-bottom: 10px;
+}
+.section p {
+  color: var(--text-dim);
+  font-size: 0.88rem;
+  line-height: 1.9;
+}
+.footer {
+  text-align: center;
+  margin-top: 32px;
+  color: var(--text-muted);
+  font-size: 0.72rem;
+  letter-spacing: 0.1em;
+}
+.footer a {
+  color: var(--text-dim);
+  text-decoration: underline;
+  cursor: pointer;
+}
+</style>
+</head>
+<body>
+<div class="container">
+
+  <div class="brand">
+    <h1>ASCENT</h1>
+    <div class="tagline">NO LIMITS &mdash; MEMBER PORTAL</div>
+  </div>
+
+  <!-- LOGIN STATE -->
+  <div id="login-state" class="card">
+    <div class="card-label">MEMBER LOGIN</div>
+    <h2>会員ログイン</h2>
+
+    <label for="input-member-id">会員ID</label>
+    <input type="text" id="input-member-id" placeholder="ASC-2026-XXXX" autocomplete="off" inputmode="text">
+    <div class="input-hint">LINEトークに届いたIDを入力してください</div>
+
+    <label for="input-password">パスワード</label>
+    <input type="password" id="input-password" placeholder="プラン別パスワード" autocomplete="current-password">
+    <div class="input-hint">購入時メールに記載のプラン別パスワード</div>
+
+    <button id="btn-login" class="btn-gold">ログイン</button>
+    <div id="error-box" class="error-box"></div>
+
+    <div style="text-align:center;margin-top:20px;">
+      <a href="https://stepbystep-ascent.com/buy.html" style="color:var(--text-dim);font-size:0.82rem;text-decoration:underline;">まだ会員でない方はこちら</a>
+    </div>
+  </div>
+
+  <!-- DASHBOARD STATE -->
+  <div id="dashboard-state" class="card dashboard hidden">
+    <div class="card-label">DASHBOARD</div>
+    <div class="greeting" id="greeting">こんにちは、さん☺️</div>
+
+    <div class="member-id-block">
+      <div class="member-id-label">YOUR MEMBER ID</div>
+      <div class="member-id-value" id="dash-member-id">--</div>
+    </div>
+
+    <div>
+      <div class="meta-row">
+        <div class="meta-label">PLAN</div>
+        <div class="meta-value"><span id="dash-plan-badge" class="plan-badge">--</span></div>
+      </div>
+      <div class="meta-row">
+        <div class="meta-label">JOINED</div>
+        <div class="meta-value" id="dash-joined">--</div>
+      </div>
+    </div>
+
+    <div class="section">
+      <h3>TRAINING</h3>
+      <p>
+        ASCENT Practice で判断力トレーニングに取り組めます。<br>
+        会員向けの高精度な診断は順次開放予定です。
+      </p>
+      <a href="https://practice.stepbystep-ascent.com/" class="btn-gold" style="margin-top:14px;">ASCENT Practice で訓練する →</a>
+    </div>
+
+    <div class="section">
+      <h3>UPCOMING</h3>
+      <p>
+        Phase 2.0（AI視覚診断フル版）は夏リリース予定です。<br>
+        リリース時にこのLINEでお知らせします☺️
+      </p>
+    </div>
+
+    <div style="text-align:center;margin-top:20px;">
+      <button class="btn-outline" id="btn-logout">ログアウト</button>
+    </div>
+  </div>
+
+  <div class="footer">
+    Step By Step ASCENT &middot; <a href="https://stepbystep-ascent.com/terms/" target="_blank">利用規約</a>
+  </div>
+</div>
+
+<script>
+(function () {
+  var WORKER_URL = 'https://ascent-line-survey.moriki-beaters.workers.dev';
+  var STORAGE_KEY = 'ascent_member_session_v1';
+  var ERR_GENERIC = '会員IDまたはパスワードが正しくありません';
+  var ERR_SERVER = 'サーバーエラーが発生しました。少し時間をあけて再度お試しください';
+  var ERR_NETWORK = '接続を確認してください';
+  var ERR_FORMAT = '会員IDは ASC-2026-XXXX 形式で入力してください';
+
+  function el(id) { return document.getElementById(id); }
+
+  function showError(msg) {
+    var box = el('error-box');
+    box.textContent = msg;
+    box.style.display = 'block';
+  }
+  function clearError() {
+    var box = el('error-box');
+    box.textContent = '';
+    box.style.display = 'none';
+  }
+
+  function showDashboard(session) {
+    el('login-state').classList.add('hidden');
+    el('dashboard-state').classList.remove('hidden');
+
+    var name = session.displayName || 'メンバー';
+    el('greeting').textContent = 'こんにちは、' + name + 'さん☺️';
+    el('dash-member-id').textContent = session.memberId || '--';
+
+    var planKey = session.plan || 'UNLEASH';
+    var badge = el('dash-plan-badge');
+    badge.className = 'plan-badge plan-' + planKey;
+    badge.textContent = planKey;
+
+    el('dash-joined').textContent = formatJoinedDate(session.createdAt);
+  }
+
+  function showLogin() {
+    el('dashboard-state').classList.add('hidden');
+    el('login-state').classList.remove('hidden');
+  }
+
+  function formatJoinedDate(iso) {
+    if (!iso) return '—';
+    try {
+      var d = new Date(iso);
+      if (isNaN(d.getTime())) return '—';
+      var y = d.getFullYear();
+      var m = String(d.getMonth() + 1).padStart(2, '0');
+      var day = String(d.getDate()).padStart(2, '0');
+      return 'Founder 40 参加: ' + y + '-' + m + '-' + day;
+    } catch (e) {
+      return '—';
+    }
+  }
+
+  function saveSession(data) {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({
+        memberId: data.memberId,
+        displayName: data.displayName,
+        plan: data.plan,
+        createdAt: data.createdAt,
+        loggedAt: new Date().toISOString()
+      }));
+    } catch (e) { /* noop */ }
+  }
+  function loadSession() {
+    try {
+      var raw = localStorage.getItem(STORAGE_KEY);
+      if (!raw) return null;
+      return JSON.parse(raw);
+    } catch (e) { return null; }
+  }
+  function clearSession() {
+    try { localStorage.removeItem(STORAGE_KEY); } catch (e) { /* noop */ }
+  }
+
+  async function attemptLogin() {
+    clearError();
+    var btn = el('btn-login');
+    var memberIdRaw = el('input-member-id').value.trim().toUpperCase();
+    var password = el('input-password').value;
+
+    if (!memberIdRaw || !password) {
+      showError(ERR_GENERIC);
+      return;
+    }
+    if (!/^ASC-2026-\d{4}$/.test(memberIdRaw)) {
+      showError(ERR_FORMAT);
+      return;
+    }
+
+    btn.disabled = true;
+    btn.textContent = '確認中…';
+
+    var res;
+    try {
+      res = await fetch(WORKER_URL + '/verify-member', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ memberId: memberIdRaw, password: password })
+      });
+    } catch (e) {
+      btn.disabled = false;
+      btn.textContent = 'ログイン';
+      showError(ERR_NETWORK);
+      return;
+    }
+
+    if (res.status >= 500) {
+      btn.disabled = false;
+      btn.textContent = 'ログイン';
+      showError(ERR_SERVER);
+      return;
+    }
+
+    var data = null;
+    try { data = await res.json(); } catch (e) {
+      btn.disabled = false;
+      btn.textContent = 'ログイン';
+      showError(ERR_SERVER);
+      return;
+    }
+
+    btn.disabled = false;
+    btn.textContent = 'ログイン';
+
+    if (!data || !data.success) {
+      showError(ERR_GENERIC);
+      return;
+    }
+
+    saveSession(data);
+    showDashboard(data);
+  }
+
+  function logout() {
+    clearSession();
+    el('input-member-id').value = '';
+    el('input-password').value = '';
+    clearError();
+    showLogin();
+  }
+
+  // Event bindings
+  el('btn-login').addEventListener('click', attemptLogin);
+  el('btn-logout').addEventListener('click', logout);
+  [el('input-member-id'), el('input-password')].forEach(function (inp) {
+    inp.addEventListener('keydown', function (ev) {
+      if (ev.key === 'Enter') {
+        ev.preventDefault();
+        attemptLogin();
+      }
+    });
+  });
+
+  // Auto-restore session
+  var session = loadSession();
+  if (session && session.memberId) {
+    showDashboard(session);
+  } else {
+    showLogin();
+  }
+})();
+</script>
+</body>
+</html>
