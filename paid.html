@@ -368,19 +368,9 @@ input[type="file"] {
   </div>
 </div>
 
-<!-- PHASE 0: Already Diagnosed -->
-<div id="phase-diagnosed" class="phase">
-  <img src="https://practice.stepbystep-ascent.com/images/kait.png" alt="ASCENT" style="width:240px;max-width:80%;margin:0 auto 32px;display:block;">
-  <div class="card">
-    <div class="diagnosed-text">動画の送信ありがとうございます！
-申し訳ありません、AIシュート診断はお一人様1回限りとなっています。
-
-診断結果をもとに、次のステップへ進みたい方は
-UNLEASHプランをご検討ください👇</div>
-    <!-- Phase 1.5前: <a href="https://buy.stripe.com/28EcN47bXbeA8G4bMHf7i0B" class="btn-gold" target="_blank">UNLEASHプランに入会する</a> -->
-    <a href="https://buy.stripe.com/eVqcN4eEp2I4aOc9Ezf7i0G?prefilled_promo_code=LAUNCH_PRE40" class="btn-gold" target="_blank">今すぐ予約する（初月¥3,980）</a>
-  </div>
-  <p style="text-align:center;color:var(--text-muted);font-size:0.8rem;margin-top:16px;">Step By Step ASCENT 代表 森木 開斗</p>
+<!-- PHASE 0: Already Diagnosed (REMOVED - 今夜の CTA削除要件で除去) -->
+<div id="phase-diagnosed" class="phase" style="display:none !important;">
+  <!-- phase-diagnosed content removed: 有料版は無制限診断のため到達しない -->
 </div>
 
 <!-- PHASE 1: Video Upload -->
@@ -503,22 +493,10 @@ AIがシュートフォームの分析を開始しました。
 
 <!-- PHASE 5: Result -->
 <div id="phase-result" class="phase">
-  <img src="https://practice.stepbystep-ascent.com/images/kait.png" alt="ASCENT" style="width:240px;max-width:80%;margin:0 auto 32px;display:block;">
   <div class="card">
     <div id="result-content" class="result-block"></div>
   </div>
-  <div class="locked-card">
-    <div class="lock-icon">🔒</div>
-    <p>残りの原因と改善メニューは、UNLEASHプランで完全公開しています。</p>
-    <!-- Phase 1.5前: <a href="https://buy.stripe.com/28EcN47bXbeA8G4bMHf7i0B" class="btn-gold" style="margin-top:16px;" target="_blank">UNLEASHプランに入会する</a> -->
-    <a href="https://buy.stripe.com/eVqcN4eEp2I4aOc9Ezf7i0G?prefilled_promo_code=LAUNCH_PRE40" class="btn-gold" style="margin-top:16px;" target="_blank">今すぐ予約する（初月¥3,980）</a>
-  </div>
-</div>
-
-<!-- Bottom Banner -->
-<div id="bottom-banner" class="bottom-banner">
-  <!-- Phase 1.5前: <a href="https://buy.stripe.com/28EcN47bXbeA8G4bMHf7i0B" class="btn-gold" target="_blank">今すぐ予約する（初月¥3,980）→</a> -->
-  <a href="https://buy.stripe.com/eVqcN4eEp2I4aOc9Ezf7i0G?prefilled_promo_code=LAUNCH_PRE40" class="btn-gold" target="_blank">今すぐ予約する（初月¥3,980）→</a>
+  <!-- .locked-card / #bottom-banner ブロック削除: 有料会員には無料誘導CTA不要 -->
 </div>
 <div id="app-version" style="position:fixed;bottom:2px;right:6px;font-size:9px;color:rgba(255,255,255,0.15);z-index:9999;pointer-events:none;">v1.8.2</div>
 
@@ -2231,29 +2209,40 @@ async function submitAnswer() {
 // ============================================================
 // PHASE 5: RESULT
 // ============================================================
+function countCausesTotal(text) {
+  // formatFreeResult 由来の正規表現を流用: 原因2〜原因10 をカウント
+  // 原因1 は先頭固定で別カウント、合計 = matches + 1
+  // Gemini 応答が原因を含まない場合のフォールバックとして最小 1 を保証
+  const lines = (text || '').split('\n');
+  let count = 0;
+  for (let i = 0; i < lines.length; i++) {
+    if (lines[i].match(/原因[②③④⑤⑥⑦⑧⑨⑩2-9]|【原因[2-9]|【[2-9]つ目/)) {
+      count++;
+    }
+  }
+  const total = count + 1;
+  return total < 1 ? 1 : total;
+}
+
 function showResult(text) {
+  // 有料版 paid.html は userTier 問わず要約表示（原因総数 + 後日LINE送付文言のみ）
   if (userTier === 'free') userTier = 'vip'; // 有料版フェイルセーフ: freeに落ちてもvip扱い
   showPhase('phase-result');
   buildFrameGallery('result-frames-images', 'result-frames', 'result-frames-toggle', 'result-toggle-icon');
 
   const resultEl = document.getElementById('result-content');
+  const totalCauses = countCausesTotal(text);
 
-  if (userTier === 'vip') {
-    // VIP: show full result + LINE guidance
-    resultEl.innerHTML = formatResultText(text)
-      + '<div style="margin-top:24px;padding:16px;background:var(--bg-elevated);border:1px solid var(--border);border-radius:8px;text-align:center;color:var(--gold);font-size:0.9rem;line-height:1.8;">改善メニューはLINEで確認してください。<br>開斗が設計したあなた専用のメニューが届きます。</div>';
-    // Hide UNLEASH banner for VIP
-    document.getElementById('bottom-banner').classList.remove('show');
-  } else if (userTier === 'lite') {
-    // LITE: show full result + UNLEASH upgrade nudge
-    resultEl.innerHTML = formatResultText(text)
-      + '<div style="margin-top:24px;padding:16px;background:var(--bg-elevated);border:1px solid var(--border);border-radius:8px;text-align:center;color:var(--text-muted);font-size:0.9rem;line-height:1.8;">改善メニューはUNLEASHプランで提供しています。<br><a href="' + UNLEASH_URL + '" target="_blank" style="color:var(--gold);text-decoration:underline;">今すぐ予約する（初月¥3,980）→</a></div>';
-    document.getElementById('bottom-banner').classList.add('show');
-  } else {
-    // FREE: show only 1st cause, lock the rest
-    resultEl.innerHTML = formatFreeResult(text);
-    document.getElementById('bottom-banner').classList.add('show');
-  }
+  resultEl.innerHTML =
+    '<div style="padding:22px 20px;background:var(--bg-elevated);border:1px solid var(--border);border-radius:10px;text-align:center;">'
+      + '<div style="font-family:\'Cinzel\',serif;color:var(--gold);font-size:0.78rem;letter-spacing:0.24em;font-weight:600;margin-bottom:12px;">DIAGNOSIS RESULT</div>'
+      + '<div style="font-size:1rem;color:var(--text);line-height:1.9;">あなたのシュートフォームから<br>'
+        + '<span style="font-family:\'Cormorant Garamond\',serif;color:var(--gold);font-size:2.4rem;font-weight:600;letter-spacing:0.06em;display:inline-block;margin:6px 2px;">' + totalCauses + '個</span>'
+        + 'の改善ポイントが見つかりました</div>'
+    + '</div>'
+    + '<div style="margin-top:20px;padding:16px 18px;background:rgba(201,168,76,0.06);border-left:2px solid var(--gold);border-radius:4px;color:var(--text);font-size:0.9rem;line-height:1.9;">'
+      + '改善メニューは後日 LINE でお送りします☺️'
+    + '</div>';
 
   // Clear progress state and set trial used flag
   clearState();
@@ -2265,38 +2254,6 @@ function showResult(text) {
 
 function formatResultText(text) {
   return '<div style="white-space:pre-wrap;line-height:1.9;">' + escapeHtml(text) + '</div>';
-}
-
-function formatFreeResult(text) {
-  // Split by numbered causes (e.g. "原因1" "原因2" or numbered patterns)
-  const lines = text.split('\n');
-  let firstCauseEnd = -1;
-  let causeCount = 0;
-
-  for (let i = 0; i < lines.length; i++) {
-    if (lines[i].match(/原因[②③④⑤⑥⑦⑧⑨⑩2-9]|【原因[2-9]|【[2-9]つ目/)) {
-      if (firstCauseEnd === -1) firstCauseEnd = i;
-      causeCount++;
-    }
-  }
-
-  if (firstCauseEnd > 0) {
-    const visiblePart = lines.slice(0, firstCauseEnd).join('\n');
-    const lockedHtml = '<div style="margin-top:20px;padding:20px;background:rgba(201,168,76,0.06);border:1px solid var(--border);border-radius:8px;text-align:center;">'
-      + '<p style="font-size:1.2rem;margin-bottom:8px;">🔒</p>'
-      + '<p style="color:var(--text-muted);font-size:0.9rem;line-height:1.8;">残りの原因と改善メニューは<br>UNLEASHプランで完全公開しています。</p>'
-      + '<a href="' + UNLEASH_URL + '" target="_blank" class="btn-gold" style="margin-top:12px;display:inline-block;">今すぐ予約する（初月¥3,980）→</a>'
-      + '</div>';
-    return '<div style="white-space:pre-wrap;line-height:1.9;">' + escapeHtml(visiblePart) + '</div>' + lockedHtml;
-  }
-
-  // Fallback: show full text + lock message
-  return '<div style="white-space:pre-wrap;line-height:1.9;">' + escapeHtml(text) + '</div>'
-    + '<div style="margin-top:20px;padding:20px;background:rgba(201,168,76,0.06);border:1px solid var(--border);border-radius:8px;text-align:center;">'
-    + '<p style="font-size:1.2rem;margin-bottom:8px;">🔒</p>'
-    + '<p style="color:var(--text-muted);font-size:0.9rem;line-height:1.8;">残りの原因と改善メニューは<br>UNLEASHプランで完全公開しています。</p>'
-    + '<a href="' + UNLEASH_URL + '" target="_blank" class="btn-gold" style="margin-top:12px;display:inline-block;">今すぐ予約する（初月¥3,980）→</a>'
-    + '</div>';
 }
 
 function escapeHtml(str) {
