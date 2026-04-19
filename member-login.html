@@ -388,10 +388,14 @@ input[type="text"]:focus, input[type="password"]:focus {
     try {
       var d = new Date(iso);
       if (isNaN(d.getTime())) return '—';
-      var y = d.getFullYear();
-      var m = String(d.getMonth() + 1).padStart(2, '0');
-      var day = String(d.getDate()).padStart(2, '0');
-      return 'Founder 40 参加: ' + y + '-' + m + '-' + day;
+      // Asia/Tokyo 固定で YYYY-MM-DD に正規化（端末のタイムゾーン設定に依存しない）
+      var formatted = d.toLocaleDateString('ja-JP', {
+        timeZone: 'Asia/Tokyo',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit'
+      }).replace(/\//g, '-');
+      return 'Founder 40 参加: ' + formatted;
     } catch (e) {
       return '—';
     }
