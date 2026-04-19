@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,user-scalable=no">
+<title>ASCENT | 診断結果を受け取る</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600&family=Cormorant+Garamond:wght@500;600&family=Noto+Serif+JP:wght@400;500;700&display=swap" rel="stylesheet">
+<script charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+<style>
+:root {
+  --bg: #050507;
+  --bg-elevated: rgba(255,255,255,0.03);
+  --gold: #C9A84C;
+  --text: #F5F0E8;
+  --text-dim: rgba(245,240,232,0.6);
+  --text-muted: rgba(245,240,232,0.4);
+  --border: rgba(201,168,76,0.25);
+  --danger: #e06666;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Noto Serif JP', serif;
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+}
+body {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  line-height: 1.8;
+}
+.container {
+  width: 100%;
+  max-width: 480px;
+  text-align: center;
+}
+.card {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 40px 24px;
+}
+.spinner {
+  width: 52px;
+  height: 52px;
+  margin: 0 auto 28px;
+  border: 3px solid rgba(201,168,76,0.15);
+  border-top-color: var(--gold);
+  border-radius: 50%;
+  animation: spin 0.9s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+h1 {
+  font-family: 'Cinzel', serif;
+  color: var(--gold);
+  font-size: 1.05rem;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  margin-bottom: 16px;
+}
+.label {
+  font-family: 'Cinzel', serif;
+  color: var(--text-dim);
+  font-size: 0.75rem;
+  letter-spacing: 0.2em;
+  margin-bottom: 8px;
+}
+.member-id {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 2.4rem;
+  font-weight: 600;
+  color: var(--gold);
+  letter-spacing: 0.08em;
+  margin: 12px 0 24px;
+  word-break: break-all;
+}
+.message {
+  color: var(--text);
+  line-height: 1.9;
+  font-size: 0.95rem;
+  margin-top: 12px;
+}
+.message-muted {
+  color: var(--text-dim);
+  font-size: 0.85rem;
+  line-height: 1.8;
+  margin-top: 12px;
+}
+.btn-gold {
+  display: inline-block;
+  padding: 14px 32px;
+  background: var(--gold);
+  color: var(--bg);
+  font-family: 'Noto Serif JP', serif;
+  font-weight: 700;
+  text-decoration: none;
+  border: none;
+  border-radius: 4px;
+  letter-spacing: 0.05em;
+  margin-top: 24px;
+  cursor: pointer;
+  font-size: 0.95rem;
+}
+.error-box {
+  border: 1px solid rgba(224,102,102,0.4);
+  background: rgba(224,102,102,0.05);
+  padding: 16px;
+  border-radius: 6px;
+  margin-top: 16px;
+  color: #ffb0b0;
+  font-size: 0.9rem;
+  line-height: 1.8;
+  text-align: left;
+}
+.hidden { display: none !important; }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <div id="loading-state" class="card">
+    <div class="spinner"></div>
+    <h1>PREPARING</h1>
+    <p class="message">診断結果を準備しています...</p>
+    <p class="message-muted">LINEアカウントと診断結果を連携中</p>
+  </div>
+
+  <div id="success-state" class="card hidden">
+    <h1>ID ISSUED</h1>
+    <p class="label">YOUR MEMBER ID</p>
+    <div class="member-id" id="member-id-display">--</div>
+    <p class="message">このIDはLINEトークに送信されました。</p>
+    <p class="message-muted">
+      有料版リリース時のログインIDとして使用します。<br>
+      リリースまで大切に保管してください。<br>
+      <span id="close-hint" style="color:var(--gold);">まもなくLINEトークに戻ります...</span>
+    </p>
+    <a href="#" id="btn-close" class="btn-gold">LINEトークを開く</a>
+  </div>
+
+  <div id="error-state" class="card hidden">
+    <h1>ERROR</h1>
+    <div class="error-box" id="error-message">エラー内容</div>
+    <a href="https://practice.stepbystep-ascent.com/trial.html" class="btn-gold">診断からやり直す</a>
+  </div>
+
+</div>
+
+<script>
+(function () {
+  var LIFF_ID = '2009830148-ceCEjWvy';
+  var WORKER_URL = 'https://ascent-line-survey.moriki-beaters.workers.dev';
+
+  function show(id) {
+    var states = ['loading-state', 'success-state', 'error-state'];
+    for (var i = 0; i < states.length; i++) {
+      var el = document.getElementById(states[i]);
+      if (!el) continue;
+      if (states[i] === id) el.classList.remove('hidden');
+      else el.classList.add('hidden');
+    }
+  }
+
+  function attemptClose() {
+    try {
+      if (window.liff && liff.isInClient && liff.isInClient()) {
+        liff.closeWindow();
+        return;
+      }
+    } catch (e) {
+      console.warn('[LIFF] closeWindow failed:', e);
+    }
+    try { window.close(); } catch (e) { /* noop */ }
+  }
+
+  function showSuccess(memberId) {
+    var idEl = document.getElementById('member-id-display');
+    if (idEl) idEl.textContent = memberId || '--';
+
+    var inClient = false;
+    try {
+      inClient = !!(window.liff && liff.isInClient && liff.isInClient());
+    } catch (e) { inClient = false; }
+
+    var hint = document.getElementById('close-hint');
+    if (hint) {
+      hint.textContent = inClient
+        ? 'まもなくLINEトークに戻ります...'
+        : 'このタブを閉じて、LINEアプリでトーク画面をご確認ください。';
+    }
+
+    var btnClose = document.getElementById('btn-close');
+    if (btnClose) {
+      btnClose.textContent = inClient ? 'LINEトークを開く' : 'このタブを閉じる';
+      btnClose.addEventListener('click', function (ev) {
+        ev.preventDefault();
+        attemptClose();
+      });
+    }
+
+    show('success-state');
+
+    if (inClient) {
+      setTimeout(attemptClose, 5000);
+    }
+  }
+
+  function showError(msg) {
+    var el = document.getElementById('error-message');
+    if (el) el.textContent = msg || 'エラーが発生しました';
+    show('error-state');
+  }
+
+  async function init() {
+    if (!window.liff) {
+      showError('LIFF SDK の読み込みに失敗しました。通信環境を確認してください。');
+      return;
+    }
+
+    try {
+      await liff.init({ liffId: LIFF_ID });
+    } catch (e) {
+      console.error('[LIFF] init failed:', e);
+      showError('LIFF初期化に失敗しました（' + ((e && e.message) || 'unknown') + '）');
+      return;
+    }
+
+    if (!liff.isLoggedIn()) {
+      liff.login();
+      return;
+    }
+
+    var profile;
+    try {
+      profile = await liff.getProfile();
+    } catch (e) {
+      console.error('[LIFF] getProfile failed:', e);
+      showError('プロフィール取得に失敗しました。もう一度お試しください。');
+      return;
+    }
+
+    var lineUid = profile && profile.userId;
+    var displayName = (profile && profile.displayName) || '';
+
+    var params = new URLSearchParams(window.location.search);
+    var token = params.get('token');
+
+    if (!token) {
+      showError('トークンが見つかりません。診断画面から最初からやり直してください。');
+      return;
+    }
+
+    var res;
+    try {
+      res = await fetch(WORKER_URL + '/link-diagnosis', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token: token, lineUid: lineUid, displayName: displayName })
+      });
+    } catch (e) {
+      console.error('[LIFF] fetch failed:', e);
+      showError('サーバーエラーが発生しました。通信環境を確認して再度お試しください。');
+      return;
+    }
+
+    var data = null;
+    try { data = await res.json(); } catch (e) {
+      console.error('[LIFF] response parse failed:', e);
+      showError('サーバーからの応答が解析できませんでした（HTTP ' + res.status + '）');
+      return;
+    }
+
+    if (!res.ok || !data || !data.success) {
+      var errMsg = (data && data.error) ? data.error : ('サーバーエラーが発生しました（HTTP ' + res.status + '）');
+      showError(errMsg);
+      return;
+    }
+
+    showSuccess(data.memberId);
+  }
+
+  init();
+})();
+</script>
+</body>
+</html>

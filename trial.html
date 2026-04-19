@@ -506,11 +506,20 @@ AIがシュートフォームの分析を開始しました。
   <div class="card">
     <div id="result-content" class="result-block"></div>
   </div>
+
+  <!-- Phase 1.5: LINE連携でID受け取り（FREEのみ表示） -->
+  <div id="line-receive-wrapper" style="display:none;margin:24px auto;text-align:center;">
+    <a id="btn-line-receive" href="#" class="btn-gold" style="display:inline-block;">LINEで結果とIDを受け取る</a>
+    <p style="font-size:0.8rem;color:var(--text-muted);margin-top:8px;line-height:1.6;">タップするとLINEで会員ID（ASC-2026-XXXX）が届きます。<br>有料版リリース時のログインIDになります。</p>
+  </div>
+
   <div class="locked-card">
     <div class="lock-icon">🔒</div>
-    <p>残りの原因と改善メニューは、UNLEASHプランで完全公開しています。</p>
+    <h3 style="font-family:'Cinzel',serif;color:var(--gold);font-size:1.15rem;letter-spacing:0.08em;margin:0 0 12px;">残りの診断結果、気になりませんか？</h3>
+    <p id="cta-dynamic-msg" style="color:var(--text);line-height:1.8;margin:0 0 8px;font-size:0.95rem;">他にも複数の原因が、<br>あなたのシュートに影響している可能性があります。</p>
+    <p style="color:var(--text-muted);line-height:1.8;font-size:0.85rem;">UNLEASHプランで全ての原因と改善メニューを確認できます。</p>
     <!-- Phase 1.5前: <a href="https://buy.stripe.com/28EcN47bXbeA8G4bMHf7i0B" class="btn-gold" style="margin-top:16px;" target="_blank">UNLEASHプランに入会する</a> -->
-    <a href="https://buy.stripe.com/eVqcN4eEp2I4aOc9Ezf7i0G?prefilled_promo_code=LAUNCH_PRE40" class="btn-gold" style="margin-top:16px;" target="_blank">今すぐ予約する（初月¥3,980）</a>
+    <a href="https://buy.stripe.com/eVqcN4eEp2I4aOc9Ezf7i0G?prefilled_promo_code=LAUNCH_PRE40" class="btn-gold" style="margin-top:16px;" target="_blank">今すぐ予約する（初月¥3,980）→</a>
     <p class="cta-subtext">40名限定｜明日22:20まで</p>
   </div>
 </div>
@@ -2260,42 +2269,119 @@ function showResult(text) {
 
   // Save to Airtable (fire-and-forget)
   saveToAirtable(text);
+
+  // Phase 1.5: FREEティアのみ動的CTAメッセージ & LINE連携ボタン初期化
+  if (userTier !== 'vip' && userTier !== 'lite') {
+    try {
+      const remaining = getRemainingCauseCount(text);
+      const msgEl = document.getElementById('cta-dynamic-msg');
+      if (msgEl) msgEl.innerHTML = getDynamicCtaMessage(remaining);
+    } catch (e) {
+      console.warn('[Phase 1.5] CTA dynamic message update failed:', e);
+    }
+    initLineReceiveButton(text);
+  }
+}
+
+// Phase 1.5: LINE連携でID受け取り（FREEティア専用）
+async function initLineReceiveButton(resultText) {
+  try {
+    const token = (window.crypto && window.crypto.randomUUID)
+      ? window.crypto.randomUUID()
+      : ('xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+          var r = Math.random() * 16 | 0;
+          return (c === 'x' ? r : (r & 0x3) | 0x8).toString(16);
+        }));
+
+    const diagnosisData = {
+      resultText: resultText || '',
+      specs: currentSpecs ? {
+        age: currentSpecs.age,
+        height: currentSpecs.height,
+        weight: currentSpecs.weight,
+        gender: currentSpecs.gender,
+        hand: currentSpecs.hand,
+        sender: currentSpecs.sender
+      } : null,
+      mediaKind: typeof mediaKind !== 'undefined' ? mediaKind : null,
+      timestamp: new Date().toISOString()
+    };
+
+    const res = await fetch('https://ascent-line-survey.moriki-beaters.workers.dev/create-temp-token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token: token, diagnosisData: diagnosisData })
+    });
+
+    if (!res.ok) throw new Error('create-temp-token HTTP ' + res.status);
+    const data = await res.json();
+    if (!data || !data.success) throw new Error('create-temp-token responded without success');
+
+    const liffUrl = 'https://liff.line.me/2009830148-ceCEjWvy?token=' + encodeURIComponent(token);
+    const btn = document.getElementById('btn-line-receive');
+    const wrapper = document.getElementById('line-receive-wrapper');
+    if (btn && wrapper) {
+      btn.setAttribute('href', liffUrl);
+      wrapper.style.display = 'block';
+    }
+  } catch (e) {
+    console.error('[Phase 1.5] LINE receive init failed:', e);
+    // エラー時はボタン非表示維持
+  }
 }
 
 function formatResultText(text) {
   return '<div style="white-space:pre-wrap;line-height:1.9;">' + escapeHtml(text) + '</div>';
 }
 
-function formatFreeResult(text) {
-  // Split by numbered causes (e.g. "原因1" "原因2" or numbered patterns)
-  const lines = text.split('\n');
-  let firstCauseEnd = -1;
-  let causeCount = 0;
-
+function getRemainingCauseCount(text) {
+  // causeCount: 原因2〜10 or 【原因2〜9】 or 【2-9つ目】 の出現数 = "原因1以降の残数"
+  const lines = (text || '').split('\n');
+  let count = 0;
   for (let i = 0; i < lines.length; i++) {
     if (lines[i].match(/原因[②③④⑤⑥⑦⑧⑨⑩2-9]|【原因[2-9]|【[2-9]つ目/)) {
-      if (firstCauseEnd === -1) firstCauseEnd = i;
-      causeCount++;
+      count++;
     }
   }
+  return count;
+}
+
+function getDynamicCtaMessage(remainingCount) {
+  if (remainingCount <= 0) {
+    return '他にも複数の原因が、<br>あなたのシュートに影響している可能性があります。';
+  }
+  if (remainingCount <= 2) {
+    return 'もう1つ、核心的な原因が隠れています。';
+  }
+  if (remainingCount <= 6) {
+    return '他にも' + remainingCount + '個の原因が、<br>あなたのシュートに影響している可能性があります。';
+  }
+  return '5個以上の原因が、<br>あなたのシュートに影響している可能性があります。';
+}
+
+function formatFreeResult(text) {
+  const lines = (text || '').split('\n');
+  let firstCauseEnd = -1;
+  for (let i = 0; i < lines.length; i++) {
+    if (lines[i].match(/原因[②③④⑤⑥⑦⑧⑨⑩2-9]|【原因[2-9]|【[2-9]つ目/)) {
+      if (firstCauseEnd === -1) { firstCauseEnd = i; break; }
+    }
+  }
+  const remaining = getRemainingCauseCount(text);
+  const dynamicMsg = getDynamicCtaMessage(remaining);
+
+  const lockedHtml = '<div style="margin-top:20px;padding:20px;background:rgba(201,168,76,0.06);border:1px solid var(--border);border-radius:8px;text-align:center;">'
+    + '<p style="font-size:1.2rem;margin-bottom:8px;">🔒</p>'
+    + '<p style="color:var(--text);font-size:0.95rem;line-height:1.8;margin-bottom:6px;">' + dynamicMsg + '</p>'
+    + '<p style="color:var(--text-muted);font-size:0.85rem;line-height:1.8;">UNLEASHプランで全ての原因と改善メニューを確認できます。</p>'
+    + '<a href="' + UNLEASH_URL + '" target="_blank" class="btn-gold" style="margin-top:12px;display:inline-block;">今すぐ予約する（初月¥3,980）→</a>'
+    + '</div>';
 
   if (firstCauseEnd > 0) {
     const visiblePart = lines.slice(0, firstCauseEnd).join('\n');
-    const lockedHtml = '<div style="margin-top:20px;padding:20px;background:rgba(201,168,76,0.06);border:1px solid var(--border);border-radius:8px;text-align:center;">'
-      + '<p style="font-size:1.2rem;margin-bottom:8px;">🔒</p>'
-      + '<p style="color:var(--text-muted);font-size:0.9rem;line-height:1.8;">残りの原因と改善メニューは<br>UNLEASHプランで完全公開しています。</p>'
-      + '<a href="' + UNLEASH_URL + '" target="_blank" class="btn-gold" style="margin-top:12px;display:inline-block;">今すぐ予約する（初月¥3,980）→</a>'
-      + '</div>';
     return '<div style="white-space:pre-wrap;line-height:1.9;">' + escapeHtml(visiblePart) + '</div>' + lockedHtml;
   }
-
-  // Fallback: show full text + lock message
-  return '<div style="white-space:pre-wrap;line-height:1.9;">' + escapeHtml(text) + '</div>'
-    + '<div style="margin-top:20px;padding:20px;background:rgba(201,168,76,0.06);border:1px solid var(--border);border-radius:8px;text-align:center;">'
-    + '<p style="font-size:1.2rem;margin-bottom:8px;">🔒</p>'
-    + '<p style="color:var(--text-muted);font-size:0.9rem;line-height:1.8;">残りの原因と改善メニューは<br>UNLEASHプランで完全公開しています。</p>'
-    + '<a href="' + UNLEASH_URL + '" target="_blank" class="btn-gold" style="margin-top:12px;display:inline-block;">今すぐ予約する（初月¥3,980）→</a>'
-    + '</div>';
+  return '<div style="white-space:pre-wrap;line-height:1.9;">' + escapeHtml(text) + '</div>' + lockedHtml;
 }
 
 function escapeHtml(str) {
