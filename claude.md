@@ -122,6 +122,59 @@ CTAボタン：動詞始まり「今すぐ無料で〜する」
 
 ---
 
+## 08.5 Cursor Inbox（LINE→Claude Code双方向ブリッジ・自動振り分け）
+
+LINEメッセージは内容に応じて自動振り分け：
+- **実装系キーワード検出時** → Cursor上の私（Claude Code）のキューに保存
+- **質問・調査・コピー作成系** → LINE内のAIチーム（CMO/CTO/CPO/CDO）が即答
+- **`@cursor` プレフィックス** → 強制的にCursorキューへ
+
+### 振り分け対象キーワード（isCodeInstruction）
+- 動詞: 変更/修正/追加/削除/変えて/作って/実装して/消して/直して/入れて
+- ファイル: trial.html / index.html / claude.md / SKILL
+- 領域: LP / ランディング / CSS / JavaScript / HTML
+- 要素: ボタン / セクション / テキスト / フォント / 色 / サイズ / デザイン
+
+### 使い方
+- **LINE側**: 普通に「buy.htmlの色変えて」と送信（プレフィックス不要）
+- **Cursor側（私）**: 会話開始時に必ず `~/ascent-practice/scripts/cursor_inbox.sh list` で未処理タスクを確認する
+- **完了後**: `~/ascent-practice/scripts/cursor_inbox.sh done <key>` で処理済みマーク → `~/ascent-practice/scripts/cursor_inbox.sh notify "完了報告"` でLINEに通知
+
+### エンドポイント
+- GET  https://ascent-agent.moriki-beaters.workers.dev/cursor-inbox?secret=...
+- POST https://ascent-agent.moriki-beaters.workers.dev/cursor-inbox （done マーク）
+- POST https://ascent-agent.moriki-beaters.workers.dev/notify （LINE通知）
+
+### Secrets（Workersに登録済み）
+- INBOX_SECRET: <REDACTED>
+- NOTIFY_SECRET: <REDACTED>
+
+---
+
+## 08.6 VIP招待コード（無料でUNLEASH体験させる）
+
+### 用途
+- Bリーグ選手などにテスト/営業用に無料でUNLEASH体験してもらう
+- 1コード1回使い切り、期限付き
+
+### コード発行（Cursor側）
+```bash
+~/ascent-practice/scripts/vip_invite.sh "メモ（誰用か）" 有効日数
+# 例: ~/ascent-practice/scripts/vip_invite.sh "Bリーグ選手テスト" 14
+```
+→ 招待URL `https://practice.stepbystep-ascent.com/trial?code=VIP-XXXXXXXX` が発行される。これを相手に送信。
+
+### 動作
+- `?code=VIP-...` でアクセス → `/verify-invite` 検証 → VIP扱い
+- 1度使われると即「used」フラグ付与、他人は使えない
+- localStorageに記憶するので本人は再訪時もVIP維持
+
+### エンドポイント
+- POST /vip-invite — 管理者のみ（INBOX_SECRET）
+- POST /verify-invite — 公開（CORS対応・trial.htmlから呼ぶ）
+
+---
+
 ## 09 Kaitへの報告形式
 
 - プロセスはトーク、結論は資料
@@ -210,7 +263,7 @@ CTAボタン：動詞始まり「今すぐ無料で〜する」
 ### 2026-04-14（深夜）
 
 **完了済み：**
-1. **`/notify` エンドポイント**（ascent-agent）— LINE報告用。合言葉 `moriki.beaters` で `NOTIFY_SECRET` 登録済み・デプロイ済み
+1. **`/notify` エンドポイント**（ascent-agent）— LINE報告用。`NOTIFY_SECRET` 登録済み・デプロイ済み
 2. **フェーズ1.5 骨格可視化を `trial.html` に統合** — 写真対応・白線+赤関節の骨格描画・mediaFile/mediaKind統合
 3. **JS構文エラー修正** — 文字化けで真っ黒になる問題を解消
 4. **`checkUserTier` タイムアウト追加** — `/verify-member` 未実装による画面フリーズ対策
