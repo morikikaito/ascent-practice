@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,user-scalable=no">
+<meta name="theme-color" content="#050507">
+<title>ASCENT | VIP AMBASSADOR</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Cormorant+Garamond:wght@500;600&family=Noto+Serif+JP:wght@300;400;500;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #050507;
+  --bg-card: #13131F;
+  --bg-elevated: rgba(255,255,255,0.03);
+  --gold: #C9A84C;
+  --gold-light: #e0c070;
+  --gold-dark: #9a7a2e;
+  --text: #F5F0E8;
+  --text-dim: rgba(245,240,232,0.6);
+  --text-muted: rgba(245,240,232,0.4);
+  --border: rgba(201,168,76,0.25);
+  --danger: #e06666;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Noto Serif JP', serif;
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+}
+body {
+  padding: 48px 24px;
+  line-height: 1.8;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+}
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.container {
+  width: 100%;
+  max-width: 480px;
+  animation: fadeUp 0.7s ease-out both;
+}
+.brand {
+  text-align: center;
+  margin-bottom: 28px;
+}
+.brand h1 {
+  font-family: 'Cinzel', serif;
+  font-size: 1.4rem;
+  letter-spacing: 0.24em;
+  color: var(--gold);
+  font-weight: 600;
+}
+.brand .tagline {
+  color: var(--text-muted);
+  font-size: 0.72rem;
+  letter-spacing: 0.2em;
+  margin-top: 6px;
+}
+.label-vip {
+  font-family: 'Cinzel', serif;
+  font-size: 9px;
+  letter-spacing: 0.4em;
+  color: var(--gold);
+  text-align: center;
+  margin-bottom: 18px;
+  text-transform: uppercase;
+}
+.headline {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 1.35rem;
+  font-weight: 600;
+  color: var(--text);
+  text-align: center;
+  letter-spacing: 0.04em;
+  line-height: 1.6;
+  margin-bottom: 16px;
+}
+.founder-voice {
+  color: var(--text-dim);
+  font-size: 0.92rem;
+  line-height: 1.9;
+  text-align: center;
+  margin-bottom: 28px;
+  padding: 0 4px;
+}
+.card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 32px 24px;
+}
+label {
+  display: block;
+  color: var(--text-dim);
+  font-size: 0.78rem;
+  letter-spacing: 0.12em;
+  margin: 16px 0 6px;
+  font-family: 'Cinzel', serif;
+}
+label:first-of-type { margin-top: 0; }
+input[type="text"], input[type="email"] {
+  width: 100%;
+  padding: 14px 16px;
+  background: #000;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text);
+  font-family: 'Noto Serif JP', serif;
+  font-size: 1rem;
+  letter-spacing: 0.05em;
+  -webkit-appearance: none;
+}
+input[type="text"]:focus, input[type="email"]:focus {
+  outline: none;
+  border-color: var(--gold);
+  box-shadow: 0 0 0 2px rgba(201,168,76,0.15);
+}
+.btn-cta-main {
+  display: block;
+  width: 100%;
+  padding: 16px 20px;
+  margin-top: 28px;
+  background: var(--gold);
+  color: var(--bg);
+  font-family: 'Noto Serif JP', serif;
+  font-weight: 700;
+  text-decoration: none;
+  border: none;
+  border-radius: 6px;
+  letter-spacing: 0.08em;
+  cursor: pointer;
+  font-size: 0.98rem;
+  text-align: center;
+  transition: background 0.18s ease;
+}
+.btn-cta-main:hover:not(:disabled) { background: var(--gold-light); }
+.btn-cta-main:disabled { opacity: 0.5; cursor: not-allowed; }
+.error-box {
+  display: none;
+  border: 1px solid rgba(224,102,102,0.4);
+  background: rgba(224,102,102,0.05);
+  padding: 12px 14px;
+  border-radius: 6px;
+  margin-top: 16px;
+  color: #ffb0b0;
+  font-size: 0.88rem;
+  line-height: 1.7;
+}
+.footer {
+  text-align: center;
+  margin-top: 32px;
+  color: var(--text-muted);
+  font-size: 0.72rem;
+  letter-spacing: 0.18em;
+  font-family: 'Cinzel', serif;
+}
+</style>
+</head>
+<body>
+
+<div class="container">
+  <div class="brand">
+    <h1>ASCENT</h1>
+    <div class="tagline">STEP BY STEP</div>
+  </div>
+
+  <div class="label-vip">VIP AMBASSADOR</div>
+
+  <div class="headline">あなたに渡されたのは、<br>まだ世に出していない機能の鍵です。</div>
+
+  <div class="founder-voice">
+    俺が信頼してる選手にだけ、<br>
+    UNLEASH の全機能を開放した。<br>
+    コードを入れて、好きに使ってくれ。
+  </div>
+
+  <div class="card">
+    <label for="input-code">VIP コード</label>
+    <input id="input-code" type="text" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="VIP_001">
+
+    <label for="input-email">メールアドレス（任意）</label>
+    <input id="input-email" type="email" autocomplete="email" spellcheck="false" placeholder="player@example.com">
+
+    <input id="input-line-uid" type="hidden" value="">
+
+    <button id="btn-submit" class="btn-cta-main" type="button">認証して機能を解放する</button>
+
+    <div id="error-box" class="error-box"></div>
+  </div>
+
+  <div class="footer">STEP BY STEP ASCENT</div>
+</div>
+
+<script>
+(function () {
+  var WORKER_URL = 'https://ascent-line-survey.moriki-beaters.workers.dev';
+  var REDIRECT_URL = '/member.html';
+
+  var ERR_NOT_FOUND     = 'このコードは存在しません。コードを再確認してください。';
+  var ERR_ALREADY_USED  = 'このコードは既に別の端末で使用されています。森木までご連絡ください。';
+  var ERR_REVOKED       = 'このコードは現在停止中です。森木までご連絡ください。';
+  var ERR_NETWORK       = '接続に失敗しました。電波の良い場所で再度お試しください。';
+  var ERR_GENERIC       = '認証に失敗しました。少し時間をあけて再度お試しください。';
+
+  function el(id) { return document.getElementById(id); }
+
+  function showError(msg) {
+    var box = el('error-box');
+    box.textContent = msg;
+    box.style.display = 'block';
+  }
+  function clearError() {
+    var box = el('error-box');
+    box.textContent = '';
+    box.style.display = 'none';
+  }
+
+  function readUidFromQuery() {
+    try {
+      var params = new URLSearchParams(window.location.search);
+      return params.get('uid') || '';
+    } catch (e) { return ''; }
+  }
+
+  function init() {
+    var uid = readUidFromQuery();
+    el('input-line-uid').value = uid;
+
+    el('btn-submit').addEventListener('click', attemptVerify);
+    el('input-code').addEventListener('keydown', function (e) {
+      if (e.key === 'Enter') { e.preventDefault(); attemptVerify(); }
+    });
+    el('input-email').addEventListener('keydown', function (e) {
+      if (e.key === 'Enter') { e.preventDefault(); attemptVerify(); }
+    });
+  }
+
+  async function attemptVerify() {
+    clearError();
+
+    var btn = el('btn-submit');
+    var codeRaw  = el('input-code').value.trim().toUpperCase();
+    var emailRaw = el('input-email').value.trim();
+    var lineUid  = el('input-line-uid').value.trim();
+
+    if (!codeRaw) {
+      showError(ERR_NOT_FOUND);
+      return;
+    }
+
+    btn.disabled = true;
+    btn.textContent = '認証中…';
+
+    var body = {
+      code: codeRaw,
+      lineUid: lineUid,
+      email: emailRaw || null
+    };
+
+    var res;
+    try {
+      res = await fetch(WORKER_URL + '/verify-vip', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      });
+    } catch (e) {
+      btn.disabled = false;
+      btn.textContent = '認証して機能を解放する';
+      showError(ERR_NETWORK);
+      return;
+    }
+
+    var data;
+    try {
+      data = await res.json();
+    } catch (e) {
+      btn.disabled = false;
+      btn.textContent = '認証して機能を解放する';
+      showError(ERR_GENERIC);
+      return;
+    }
+
+    if (data && data.success === true) {
+      try {
+        localStorage.setItem('currentPlan', 'ambassador');
+        localStorage.setItem('userTier', 'vip');
+        localStorage.setItem('memberId', codeRaw);
+      } catch (e) { /* localStorage 不可は致命的でないため握りつぶす */ }
+      window.location.href = REDIRECT_URL;
+      return;
+    }
+
+    btn.disabled = false;
+    btn.textContent = '認証して機能を解放する';
+
+    var errKey = data && data.error;
+    if (errKey === 'code_not_found')        showError(ERR_NOT_FOUND);
+    else if (errKey === 'code_already_used') showError(ERR_ALREADY_USED);
+    else if (errKey === 'code_revoked')      showError(ERR_REVOKED);
+    else                                     showError(ERR_GENERIC);
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
+})();
+</script>
+
+</body>
+</html>
