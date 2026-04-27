@@ -826,7 +826,7 @@ function setVolume(val) {
 /* ━━━ PLAN HELPERS ━━━ */
 function getCurrentPlan() { return localStorage.getItem('currentPlan') || 'lite'; }
 function isPlanAtLeast(minPlan) {
-  const order = { lite: 0, unleash: 1, pro: 2 };
+  const order = { lite: 0, unleash: 1, pro: 2, ambassador: 1 };
   return (order[getCurrentPlan()] || 0) >= (order[minPlan] || 0);
 }
 
@@ -1326,7 +1326,7 @@ function init(){
     document.getElementById('loading').classList.add('hidden');
     // member.html 専用: 認証必須
     var plan = localStorage.getItem('currentPlan');
-    var validPlans = ['lite', 'unleash', 'pro'];
+    var validPlans = ['lite', 'unleash', 'pro', 'ambassador'];
     if (plan && validPlans.indexOf(plan) !== -1) {
       showScreen('screen-home');
     } else {
