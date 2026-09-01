@@ -324,6 +324,22 @@ input[type="file"] {
   margin: 40px 0 32px;
   white-space: pre-line;
 }
+.phase2-optin { margin-top:18px; padding:14px; border:1px solid rgba(201,168,76,.35); border-radius:8px; background:rgba(201,168,76,.06); }
+.phase2-optin label { display:flex; gap:10px; align-items:flex-start; cursor:pointer; line-height:1.6; }
+.phase2-optin input { width:auto; margin-top:5px; }
+.phase2-options { margin-top:12px; }
+.phase2-timeline-track { display:flex; min-height:34px; overflow:hidden; border:1px solid var(--border); border-radius:7px; background:#27272d; }
+.phase2-timeline-segment { min-width:10px; }
+.phase2-timeline-segment.good { background:#22c55e; }
+.phase2-timeline-segment.warning { background:#facc15; }
+.phase2-timeline-segment.error { background:#ef4444; }
+.phase2-timeline-segment.unknown { background:repeating-linear-gradient(-45deg,#94a3b8 0 6px,#475569 6px 12px); }
+.phase2-timeline-legend { color:var(--text-muted); font-size:.78rem; line-height:1.7; }
+.phase2-peaks { display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:12px; margin-top:12px; }
+.phase2-peak-card { margin:0; padding:9px; border:1px solid var(--border); border-radius:8px; background:var(--bg-elevated); }
+.phase2-peak-card canvas { display:block; width:100%; height:auto; border-radius:5px; }
+.phase2-peak-card figcaption { margin-top:7px; color:var(--text-muted); font-size:.8rem; }
+@media (max-width:390px) { .phase2-peaks { grid-template-columns:1fr; } }
 </style>
 </head>
 <body>
@@ -371,6 +387,13 @@ UNLEASHプランをご検討ください👇</div>
     </div>
     <div id="mp-metrics"></div>
     <div id="mp-frames"></div>
+    <section id="phase2-visual-result" hidden>
+      <div class="card" style="margin-top:16px;">
+        <div style="font-family:Cinzel,serif;font-size:11px;letter-spacing:.18em;color:var(--gold);margin-bottom:10px;">ASCENT 2.0 TIMELINE</div>
+        <div id="phase2-timeline"></div>
+        <div id="phase2-peaks" class="phase2-peaks"></div>
+      </div>
+    </section>
     <button class="btn-gold" onclick="proceedToSpec()" style="margin-top:8px;">詳細診断に進む →</button>
     <p style="text-align:center;font-size:0.8rem;color:var(--text-dim);margin-top:12px;">続けてAIが詳細な改善ポイントを診断します</p>
   </div>
@@ -380,6 +403,13 @@ UNLEASHプランをご検討ください👇</div>
   <img src="https://practice.stepbystep-ascent.com/images/kait.png" alt="ASCENT" style="width:240px;max-width:80%;margin:0 auto 32px;display:block;">
   <div class="card">
     <h2 style="font-size:1.1rem;margin-bottom:16px;text-align:center;">シュート動画をアップロード</h2>
+    <div class="phase2-optin">
+      <label><input id="phase2-optin" type="checkbox"><span><strong>ASCENT 2.0 詳細解析</strong><br><small style="color:var(--text-muted);">動画全体を解析し、時間帯ごとの状態と要修正ポイントを表示します。</small></span></label>
+      <div id="phase2-options" class="phase2-options" hidden>
+        <label for="phase2-hand" style="display:block;margin-bottom:6px;color:var(--text-muted);font-size:.85rem;">利き手</label>
+        <select id="phase2-hand"><option value="RIGHT">右</option><option value="LEFT">左</option></select>
+      </div>
+    </div>
     <div id="upload-area" class="upload-area">
       <div class="icon">🎥</div>
       <p>タップして動画を選択<br>またはここにドラッグ＆ドロップ</p>
@@ -494,6 +524,8 @@ AIがシュートフォームの分析を開始しました。
 let poseLandmarker = null;
 let mediapipeResults = null;
 let skeletonFrameDataUrls = [];
+let phase2Landmarker = null;
+let phase2Output = null;
 
 const MP_IDX = {
   LEFT_SHOULDER:11, RIGHT_SHOULDER:12,
@@ -1059,6 +1091,134 @@ async function runMediaPipeAnalysis() {
   }
 }
 
+async function videoDuration(file) {
+  const video = document.createElement('video');
+  const objectUrl = URL.createObjectURL(file);
+  try {
+    return await new Promise((resolve, reject) => {
+      video.addEventListener('loadedmetadata', () => resolve(video.duration), { once: true });
+      video.addEventListener('error', () => reject(new Error('動画情報を読み込めませんでした')), { once: true });
+      video.src = objectUrl;
+    });
+  } finally {
+    URL.revokeObjectURL(objectUrl);
+  }
+}
+
+async function initPhase2Landmarker() {
+  if (phase2Landmarker) return phase2Landmarker;
+  if (!window.PoseLandmarker || !window.FilesetResolver) return null;
+  const vision = await window.FilesetResolver.forVisionTasks(
+    'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.34/wasm'
+  );
+  phase2Landmarker = await window.PoseLandmarker.createFromOptions(vision, {
+    baseOptions: {
+      modelAssetPath: 'https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.task'
+    },
+    runningMode: 'VIDEO',
+    numPoses: 1
+  });
+  return phase2Landmarker;
+}
+
+function renderPhase2Timeline(container, timeline) {
+  container.replaceChildren();
+  if (!timeline.length) {
+    container.textContent = '表示できる時間帯がありません。';
+    return;
+  }
+  const track = document.createElement('div');
+  track.className = 'phase2-timeline-track';
+  for (const band of timeline) {
+    const status = ['good', 'warning', 'error'].includes(band.status) ? band.status : 'unknown';
+    const segment = document.createElement('div');
+    segment.className = 'phase2-timeline-segment ' + status;
+    segment.style.flexGrow = String(Math.max(1, (band.end - band.start) / 1000));
+    segment.title = (band.start / 1000).toFixed(1) + '〜' + (band.end / 1000).toFixed(1) + '秒';
+    track.appendChild(segment);
+  }
+  const legend = document.createElement('p');
+  legend.className = 'phase2-timeline-legend';
+  legend.textContent = '緑: 良好　黄: 注意　赤: 要修正　斜線グレー: 判定不能';
+  container.append(track, legend);
+}
+
+function renderPhase2Peaks(container, peaks, namedLandmarks, drawSkeletonOnCanvas) {
+  container.replaceChildren();
+  if (!peaks.length) {
+    const empty = document.createElement('p');
+    empty.textContent = '要確認フレームはありません（すべて良好、または判定不能のみ）。';
+    empty.style.color = 'var(--text-muted)';
+    container.appendChild(empty);
+    return;
+  }
+  for (const peak of peaks) {
+    const card = document.createElement('figure');
+    card.className = 'phase2-peak-card';
+    const canvas = document.createElement('canvas');
+    canvas.width = 640;
+    canvas.height = 360;
+    const ctx = canvas.getContext('2d');
+    ctx.fillStyle = '#0b1220';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    drawSkeletonOnCanvas(canvas, namedLandmarks(peak.landmarks, peak.status));
+    const caption = document.createElement('figcaption');
+    caption.textContent = (peak.status === 'error' ? '要修正' : '注意') + 'ピーク — ' + (peak.t / 1000).toFixed(1) + '秒';
+    card.append(canvas, caption);
+    container.appendChild(card);
+  }
+}
+
+async function runPhase2Analysis() {
+  showPhase('phase-mediapipe');
+  const statusEl = document.getElementById('mp-status');
+  const progressEl = document.getElementById('mp-progress');
+  document.getElementById('mp-loading-section').style.display = 'block';
+  document.getElementById('mp-results-section').style.display = 'none';
+  document.getElementById('phase2-visual-result').hidden = true;
+  try {
+    statusEl.textContent = 'ASCENT 2.0を初期化しています...';
+    progressEl.style.width = '15%';
+    const [{ runPipeline }, overlayModule] = await Promise.all([
+      import('./sbs-phase2/pipeline.js'),
+      import('./sbs-phase2/overlay.js')
+    ]);
+    const [duration, landmarker] = await Promise.all([
+      videoDuration(videoFile),
+      initPhase2Landmarker()
+    ]);
+    if (!landmarker) throw new Error('MediaPipeを初期化できませんでした');
+    progressEl.style.width = '35%';
+    const output = await runPipeline({
+      blob: videoFile,
+      duration,
+      landmarker,
+      hand: document.getElementById('phase2-hand').value,
+      onWarning: message => { statusEl.textContent = message; }
+    });
+    const detectedFrames = output.frames.filter(frame => Array.isArray(frame.landmarks) && frame.landmarks.length > 0).length;
+    if (detectedFrames === 0) {
+      statusEl.textContent = '2.0で骨格を検出できなかったため、従来解析へ切り替えます。';
+      phase2Output = null;
+      await runMediaPipeAnalysis();
+      return;
+    }
+    phase2Output = output;
+    progressEl.style.width = '100%';
+    renderPhase2Timeline(document.getElementById('phase2-timeline'), output.timeline);
+    renderPhase2Peaks(document.getElementById('phase2-peaks'), output.peaks, overlayModule.namedLandmarks, overlayModule.drawSkeletonOnCanvas);
+    document.getElementById('phase2-visual-result').hidden = false;
+    document.getElementById('mp-loading-section').style.display = 'none';
+    document.getElementById('mp-results-section').style.display = 'block';
+    statusEl.textContent = 'ASCENT 2.0解析完了: ' + detectedFrames + 'フレームで骨格を検出しました。';
+  } catch (error) {
+    console.error('ASCENT 2.0 error:', error);
+    statusEl.textContent = '2.0解析を完了できなかったため、従来解析へ切り替えます。';
+    phase2Output = null;
+    await runMediaPipeAnalysis();
+  }
+}
+
 async function extractFallbackFrames() {
   try {
     const ratios = [0.25, 0.55, 0.85];
@@ -1278,7 +1438,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   await checkUserTier();
 
   const trialUsed = localStorage.getItem('ascent_trial_used');
-  if (trialUsed) {
+  // 無料体験の一度きり制限は無料ユーザーだけに適用する。
+  // 有料会員まで過去の体験履歴で止めると、課金後も診断を開始できない。
+  if (trialUsed && userTier === 'free') {
     showPhase('phase-diagnosed');
     return;
   }
@@ -1367,6 +1529,12 @@ function initUpload() {
   const area = document.getElementById('upload-area');
   const input = document.getElementById('file-input');
   const btn = document.getElementById('btn-upload');
+  const phase2Optin = document.getElementById('phase2-optin');
+  const phase2Options = document.getElementById('phase2-options');
+
+  phase2Optin.addEventListener('change', () => {
+    phase2Options.hidden = !phase2Optin.checked;
+  });
 
   area.addEventListener('click', () => input.click());
 
@@ -1439,7 +1607,11 @@ async function validateVideo() {
       extractEarlyFrames()
     ]);
     videoBase64 = base64Result;
-    runMediaPipeAnalysis();
+    if (document.getElementById('phase2-optin').checked) {
+      await runPhase2Analysis();
+    } else {
+      await runMediaPipeAnalysis();
+    }
   } catch (e) {
     console.error(e);
     showUploadError('動画の読み込みに失敗しました。\n別の動画で試してみてください📱');
@@ -1530,6 +1702,16 @@ async function startDiagnosis(specs) {
     if (mp.dip) mpDataText += `\nDIP（最下点）: 肘角度=${mp.dip.elbowAngle ?? '--'}° / 骨盤差=${mp.dip.hipDiff ?? '--'} / 要注意=${mp.dip.yellowJoints.join(',')||'なし'}`;
     if (mp.setup) mpDataText += `\nSETUP（構え）: 肘角度=${mp.setup.elbowAngle ?? '--'}° / 骨盤差=${mp.setup.hipDiff ?? '--'} / 要注意=${mp.setup.yellowJoints.join(',')||'なし'}`;
     if (mp.release) mpDataText += `\nRELEASE（リリース）: 肘角度=${mp.release.elbowAngle ?? '--'}° / 骨盤差=${mp.release.hipDiff ?? '--'} / 要注意=${mp.release.yellowJoints.join(',')||'なし'}`;
+  }
+  if (phase2Output) {
+    const counts = phase2Output.timeline.reduce((summary, band) => {
+      summary[band.status] = (summary[band.status] || 0) + 1;
+      return summary;
+    }, {});
+    mpDataText += '\n\n【ASCENT 2.0 動画全体解析】';
+    mpDataText += '\n解析フレーム数=' + phase2Output.frames.length;
+    mpDataText += '\n時間帯判定=' + JSON.stringify(counts);
+    mpDataText += '\n要確認ピーク=' + phase2Output.peaks.map(peak => (peak.t / 1000).toFixed(1) + '秒:' + peak.status).join(', ');
   }
 
   conversationHistory = [

@@ -1,0 +1,9 @@
+{
+  "name": "sbs-phase2",
+  "private": true,
+  "type": "module",
+  "main": "./all.test.js",
+  "scripts": {
+    "test": "node --test"
+  }
+}

@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>SBS Phase 2 タイムライン・骨格検証</title>
+  <style>
+    body { margin: 0; font-family: system-ui, sans-serif; background: #101827; color: #edf2f7; }
+    main { max-width: 760px; margin: 0 auto; padding: 24px 16px; }
+    input, button { font: inherit; margin: 8px 0; max-width: 100%; }
+    button { padding: 8px 12px; } #status { white-space: pre-wrap; color: #b9d8ff; }
+    .note { color: #b5c2d5; font-size: .9rem; }
+    #visual-result { margin-top: 24px; border-top: 1px solid #34445d; padding-top: 16px; }
+    .timeline-track { display: flex; min-height: 36px; overflow: hidden; border: 1px solid #5a6b83; border-radius: 7px; background: #334155; }
+    .timeline-segment { min-width: 12px; }
+    .timeline-segment.good { background: #22c55e; }
+    .timeline-segment.warning { background: #facc15; }
+    .timeline-segment.error { background: #ef4444; }
+    .timeline-segment.unknown { background: repeating-linear-gradient(-45deg, #94a3b8 0 6px, #475569 6px 12px); }
+    .timeline-legend, .timeline-empty { color: #cbd5e1; font-size: .875rem; }
+    #peak-frames { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; }
+    .peak-card { margin: 0; padding: 10px; border: 1px solid #4a5d78; border-radius: 8px; background: #172235; }
+    .peak-card canvas { display: block; width: 100%; height: auto; background: #0b1220; border-radius: 4px; }
+    .peak-card figcaption { margin-top: 8px; color: #dbeafe; }
+    .peak-empty { color: #bbf7d0; padding: 12px; border: 1px solid #166534; border-radius: 8px; background: #122c20; }
+    @media (max-width: 390px) { main { padding: 16px 12px; } #peak-frames { grid-template-columns: 1fr; } .timeline-legend { line-height: 1.6; } }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>SBS Phase 2 タイムライン・骨格検証</h1>
+    <p>動画を選ぶと、時間帯の状態と要確認フレームの骨格オーバーレイを表示します。</p>
+    <label>利き手 <select id="hand"><option value="RIGHT">右</option><option value="LEFT">左</option></select></label><br>
+    <input id="video-file" type="file" accept="video/*">
+    <button id="run" type="button" disabled>解析する</button>
+    <p id="status">MediaPipe を初期化中です…</p>
+    <pre id="result" aria-live="polite"></pre>
+    <section id="visual-result" aria-live="polite" hidden>
+      <h2>時間帯ステータス</h2>
+      <div id="timeline-ui"></div>
+      <h2>要確認ピークフレーム</h2>
+      <div id="peak-frames"></div>
+    </section>
+    <p class="note">30秒超の動画は拒否します。15秒超〜30秒以下は警告のうえ解析します。</p>
+  </main>
+  <script type="module">
+    import { FilesetResolver, PoseLandmarker } from 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14';
+    import { runPipeline, VideoDurationLimitError } from './pipeline.js';
+    import { namedLandmarks, drawSkeletonOnCanvas } from './overlay.js';
+    import { renderTimeline } from './timeline-ui.js';
+    const fileInput = document.querySelector('#video-file');
+    const runButton = document.querySelector('#run');
+    const status = document.querySelector('#status');
+    const result = document.querySelector('#result');
+    const visualResult = document.querySelector('#visual-result');
+    const timelineUi = document.querySelector('#timeline-ui');
+    const peakFrames = document.querySelector('#peak-frames');
+    function renderPeaks(peaks) {
+      peakFrames.replaceChildren();
+      if (!peaks.length) { peakFrames.innerHTML = '<p class="peak-empty">要確認フレームはありません（すべて良好、または判定不能のみ）。</p>'; return; }
+      for (const peak of peaks) {
+        const card = document.createElement('figure'); card.className = `peak-card ${peak.status}`;
+        const canvas = document.createElement('canvas'); canvas.width = 640; canvas.height = 360;
+        const ctx = canvas.getContext('2d');
+        ctx.fillStyle = '#0b1220'; ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.strokeStyle = '#1e293b'; ctx.lineWidth = 1;
+        for (let x = 0; x <= canvas.width; x += 80) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, canvas.height); ctx.stroke(); }
+        for (let y = 0; y <= canvas.height; y += 72) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(canvas.width, y); ctx.stroke(); }
+        drawSkeletonOnCanvas(canvas, namedLandmarks(peak.landmarks, peak.status));
+        const caption = document.createElement('figcaption');
+        caption.textContent = `${peak.status === 'error' ? '要修正' : '注意'}ピーク — ${(peak.t / 1000).toFixed(1)}秒`;
+        card.append(canvas, caption); peakFrames.append(card);
+      }
+    }
+    let landmarker;
+    try {
+      const vision = await FilesetResolver.forVisionTasks('https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/wasm');
+      landmarker = await PoseLandmarker.createFromOptions(vision, {
+        baseOptions: { modelAssetPath: 'https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.task' },
+        runningMode: 'VIDEO', numPoses: 1
+      });
+      status.textContent = '動画を選択してください。'; runButton.disabled = false;
+    } catch (error) { status.textContent = `MediaPipe 初期化失敗: ${error.message}`; }
+    runButton.addEventListener('click', async () => {
+      const file = fileInput.files[0];
+      if (!file) { status.textContent = '動画ファイルを選択してください。'; return; }
+      const metadataVideo = document.createElement('video');
+      const url = URL.createObjectURL(file);
+      try {
+        await new Promise((resolve, reject) => { metadataVideo.onloadedmetadata = resolve; metadataVideo.onerror = reject; metadataVideo.src = url; });
+        status.textContent = '解析中…'; result.textContent = '';
+        const output = await runPipeline({ blob: file, duration: metadataVideo.duration, landmarker, hand: document.querySelector('#hand').value, onWarning: (message) => { status.textContent = message; } });
+        console.log('SBS Phase 2 pipeline output', output);
+        result.textContent = JSON.stringify(output, null, 2);
+        renderTimeline(timelineUi, output.timeline);
+        renderPeaks(output.peaks);
+        visualResult.hidden = false;
+        status.textContent = `完了: ${output.frames.length} フレーム`;
+      } catch (error) {
+        visualResult.hidden = true;
+        status.textContent = error instanceof VideoDurationLimitError ? error.message : `解析失敗: ${error.message}`;
+      } finally { URL.revokeObjectURL(url); }
+    });
+  </script>
+</body>
+</html>
